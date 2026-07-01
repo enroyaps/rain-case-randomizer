@@ -5,20 +5,19 @@
 <title>Rain.gg Case &amp; Mode Randomizer</title>
 <style>
   :root{
-    --bg:#0b1220; --panel:#131b2e; --panel2:#0f1626; --border:#22304a;
-    --gold:#f4b942; --text:#e7ecf5; --muted:#8ba0c4;
+    --bg:#060309; --panel:#140b22; --panel2:#0d0716; --border:#2d1c46;
+    --gold:#9b5cff; --goldLight:#cba3ff; --cyan:#34e0ff; --text:#f1ecfb; --muted:#a99bd1;
     --L:#4ade80; --M:#f4d942; --H:#f4913f; --I:#f4433f;
   }
   *{box-sizing:border-box;}
   body{
     margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-    background:radial-gradient(circle at top,#16213a,var(--bg) 60%);
+    background:radial-gradient(circle at top,#2a1345,var(--bg) 60%);
     color:var(--text); min-height:100vh; padding:24px;
   }
   .wrap{max-width:980px;margin:0 auto;}
-  h1{font-size:1.6rem;margin:0 0 4px;}
   .disclaimer{
-    background:#241a10;border:1px solid #6b4a1a;color:#f4c778;
+    background:#190f2c;border:1px solid #4d2c82;color:#cbb2ef;
     padding:12px 16px;border-radius:10px;font-size:0.85rem;line-height:1.4;margin:14px 0 22px;
   }
   .panel{
@@ -37,7 +36,7 @@
     background:var(--panel2);border:1px solid var(--border);padding:6px 9px;border-radius:8px;
   }
   button{
-    background:var(--gold);color:#1a1305;border:none;font-weight:700;
+    background:var(--gold);color:#fbf7ff;border:none;font-weight:700;
     padding:12px 22px;border-radius:10px;font-size:1rem;cursor:pointer;
   }
   button:hover:not(:disabled){filter:brightness(1.08);}
@@ -49,16 +48,16 @@
 
   .spin-launch{display:flex;justify-content:center;margin:24px 0;}
   #spinBtn{
-    background:linear-gradient(180deg,#ffd873,var(--gold));color:#1a1305;
+    background:linear-gradient(180deg,var(--goldLight),var(--gold));color:#fbf7ff;
     font-size:1.3rem;font-weight:800;letter-spacing:.06em;
     padding:18px 64px;border-radius:16px;
-    box-shadow:0 6px 0 #8a6414,0 10px 22px rgba(0,0,0,.45);
-    border:2px solid #ffe8a8;
+    box-shadow:0 6px 0 #4c2789,0 10px 22px rgba(0,0,0,.55);
+    border:2px solid #dcc4ff;
     transition:transform .08s ease, box-shadow .08s ease;
   }
-  #spinBtn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 0 #8a6414,0 14px 26px rgba(0,0,0,.5);}
-  #spinBtn:active:not(:disabled){transform:translateY(4px);box-shadow:0 2px 0 #8a6414,0 4px 12px rgba(0,0,0,.4);}
-  #spinBtn:disabled{box-shadow:0 6px 0 #6b5a30;}
+  #spinBtn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 0 #4c2789,0 14px 26px rgba(0,0,0,.6);}
+  #spinBtn:active:not(:disabled){transform:translateY(4px);box-shadow:0 2px 0 #4c2789,0 4px 12px rgba(0,0,0,.5);}
+  #spinBtn:disabled{box-shadow:0 6px 0 #3a2a52;}
   .legal-note{
     color:var(--muted);font-size:0.7rem;line-height:1.5;margin-top:28px;
     border-top:1px solid var(--border);padding-top:14px;
@@ -95,7 +94,6 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>🎰 Rain.gg Case &amp; Mode Randomizer</h1>
   <div class="disclaimer">
     Pure random picker for fun / breaking decision paralysis — <b>not</b> a prediction tool.
     Case openings and battle modes are provably-fair RNG; nothing here can forecast an individual result
@@ -136,11 +134,11 @@
   </div>
 
   <div class="spin-launch">
-    <button id="spinBtn">🎰 SPIN</button>
+    <button id="spinBtn">SPIN</button>
   </div>
 
   <div class="panel results" id="resultsPanel">
-    <h2 style="margin-top:0;">Your random picks</h2>
+    <h2 style="margin-top:0;color:var(--cyan);">Your random picks</h2>
     <div class="slot-row" id="cardGrid"></div>
     <div class="total">Total: <b id="totalVal"></b></div>
 
@@ -149,10 +147,6 @@
       <div class="value" id="modeCases" style="font-size:1.05rem;color:var(--text);"></div>
       <div class="value" id="modeMain"></div>
       <div id="modeExtra" style="color:var(--muted);font-size:0.85rem;"></div>
-    </div>
-
-    <div style="margin-top:16px;">
-      <button class="secondary" id="rerollBtn">🔁 Reroll</button>
     </div>
   </div>
 
@@ -502,7 +496,6 @@ function spin(){
 }
 
 document.getElementById("spinBtn").addEventListener("click", spin);
-document.getElementById("rerollBtn").addEventListener("click", spin);
 </script>
 </body>
 </html>

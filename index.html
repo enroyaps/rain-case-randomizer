@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rain.gg Case &amp; Mode Randomizer</title>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#131b2e; --panel2:#0f1626; --border:#22304a;
+    --gold:#f4b942; --text:#e7ecf5; --muted:#8ba0c4;
+    --L:#4ade80; --M:#f4d942; --H:#f4913f; --I:#f4433f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:radial-gradient(circle at top,#16213a,var(--bg) 60%);
+    color:var(--text); min-height:100vh; padding:24px;
+  }
+  .wrap{max-width:980px;margin:0 auto;}
+  h1{font-size:1.6rem;margin:0 0 4px;}
+  .disclaimer{
+    background:#241a10;border:1px solid #6b4a1a;color:#f4c778;
+    padding:12px 16px;border-radius:10px;font-size:0.85rem;line-height:1.4;margin:14px 0 22px;
+  }
+  .panel{
+    background:var(--panel);border:1px solid var(--border);border-radius:14px;
+    padding:20px;margin-bottom:20px;
+  }
+  .controls{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;}
+  .field{display:flex;flex-direction:column;gap:6px;font-size:0.8rem;color:var(--muted);}
+  input[type=number]{
+    background:var(--panel2);border:1px solid var(--border);color:var(--text);
+    border-radius:8px;padding:8px 10px;width:130px;font-size:0.9rem;
+  }
+  .risk-toggles{display:flex;gap:8px;}
+  .risk-toggles label{
+    display:flex;align-items:center;gap:5px;cursor:pointer;font-size:0.82rem;
+    background:var(--panel2);border:1px solid var(--border);padding:6px 9px;border-radius:8px;
+  }
+  button{
+    background:var(--gold);color:#1a1305;border:none;font-weight:700;
+    padding:12px 22px;border-radius:10px;font-size:1rem;cursor:pointer;
+  }
+  button:hover:not(:disabled){filter:brightness(1.08);}
+  button:disabled{opacity:0.55;cursor:default;}
+  button.secondary{background:transparent;color:var(--gold);border:1px solid var(--gold);padding:9px 16px;font-size:0.85rem;}
+  #count-info{color:var(--muted);font-size:0.78rem;margin-top:10px;}
+  #errorMsg{color:var(--I);font-size:0.85rem;margin-top:10px;display:none;}
+  .results{display:none;}
+
+  .spin-launch{display:flex;justify-content:center;margin:24px 0;}
+  #spinBtn{
+    background:linear-gradient(180deg,#ffd873,var(--gold));color:#1a1305;
+    font-size:1.3rem;font-weight:800;letter-spacing:.06em;
+    padding:18px 64px;border-radius:16px;
+    box-shadow:0 6px 0 #8a6414,0 10px 22px rgba(0,0,0,.45);
+    border:2px solid #ffe8a8;
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  #spinBtn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 0 #8a6414,0 14px 26px rgba(0,0,0,.5);}
+  #spinBtn:active:not(:disabled){transform:translateY(4px);box-shadow:0 2px 0 #8a6414,0 4px 12px rgba(0,0,0,.4);}
+  #spinBtn:disabled{box-shadow:0 6px 0 #6b5a30;}
+  .legal-note{
+    color:var(--muted);font-size:0.7rem;line-height:1.5;margin-top:28px;
+    border-top:1px solid var(--border);padding-top:14px;
+  }
+
+  .slot-row{display:flex;gap:14px;flex-wrap:wrap;margin:16px 0;}
+  .reel{
+    width:150px;height:190px;overflow:hidden;border:2px solid var(--border);border-radius:12px;
+    background:var(--panel2);position:relative;
+  }
+  .reel::after{
+    content:""; position:absolute; inset:0;
+    box-shadow: inset 0 22px 18px -18px #000, inset 0 -22px 18px -18px #000;
+    pointer-events:none; border-radius:10px;
+  }
+  .reel-track{display:flex;flex-direction:column;}
+  .reel-item{
+    height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:6px;padding:10px;text-align:center;
+  }
+  .reel-icon{font-size:2.6rem;line-height:1;}
+  .reel-name{font-weight:600;font-size:0.82rem;}
+  .reel-price{color:var(--gold);font-size:0.82rem;}
+  .badge{font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;color:#0b1220;}
+  .badge.L{background:var(--L);} .badge.M{background:var(--M);}
+  .badge.H{background:var(--H);} .badge.I{background:var(--I);}
+
+  .total{font-size:1.05rem;margin-top:6px;}
+  .total b{color:var(--gold);}
+  .mode-box{
+    background:var(--panel2);border:1px solid var(--border);border-radius:10px;
+    padding:16px;margin-top:6px;display:flex;flex-direction:column;gap:6px;
+  }
+  .mode-box .label{color:var(--muted);font-size:0.78rem;text-transform:uppercase;letter-spacing:.04em;}
+  .mode-box .value{font-size:1.15rem;font-weight:700;}
+  .footer-note{color:var(--muted);font-size:0.75rem;margin-top:18px;line-height:1.5;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎰 Rain.gg Case &amp; Mode Randomizer</h1>
+  <div class="disclaimer">
+    Pure random picker for fun / breaking decision paralysis — <b>not</b> a prediction tool.
+    Case openings and battle modes are provably-fair RNG; nothing here can forecast an individual result
+    or improve your real odds. Prices are a manual snapshot and will drift from the live site. Icons are
+    stylized keyword-based placeholders, not the real site art. Only spend what you're OK losing.
+  </div>
+
+  <div class="panel">
+    <div class="controls">
+      <div class="field">
+        <label for="numCases"># of cases (target)</label>
+        <input type="number" id="numCases" min="1" max="10" value="3">
+      </div>
+      <div class="field">
+        <label for="minPrice">Min price / case</label>
+        <input type="number" id="minPrice" min="0" placeholder="no min">
+      </div>
+      <div class="field">
+        <label for="maxPrice">Max price / case</label>
+        <input type="number" id="maxPrice" min="0" placeholder="no max">
+      </div>
+      <div class="field">
+        <label for="budget">Max total budget</label>
+        <input type="number" id="budget" min="0" placeholder="e.g. 150">
+      </div>
+      <div class="field">
+        <label>Risk levels to include</label>
+        <div class="risk-toggles">
+          <label><input type="checkbox" value="L" checked> Low</label>
+          <label><input type="checkbox" value="M" checked> Medium</label>
+          <label><input type="checkbox" value="H" checked> High</label>
+          <label><input type="checkbox" value="I" checked> Insane</label>
+        </div>
+      </div>
+    </div>
+    <div id="count-info"></div>
+    <div id="errorMsg"></div>
+  </div>
+
+  <div class="spin-launch">
+    <button id="spinBtn">🎰 SPIN</button>
+  </div>
+
+  <div class="panel results" id="resultsPanel">
+    <h2 style="margin-top:0;">Your random picks</h2>
+    <div class="slot-row" id="cardGrid"></div>
+    <div class="total">Total: <b id="totalVal"></b></div>
+
+    <div class="mode-box">
+      <div class="label">Suggested battle setup</div>
+      <div class="value" id="modeMain"></div>
+      <div id="modeExtra" style="color:var(--muted);font-size:0.85rem;"></div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <button class="secondary" id="rerollBtn">🔁 Reroll</button>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    Tip: use this the same way you'd flip a coin — it removes the "which one do I click" moment,
+    it doesn't change the math. Every case's real odds/EV are whatever rain.gg publishes for it directly.
+  </div>
+
+  <div class="legal-note">
+    This is an independent, unofficial fan-made tool built for personal use. It is not affiliated with,
+    endorsed by, sponsored by, or in any way officially connected to Rain.gg or its operators. Any names,
+    prices, or references to Rain.gg are used solely for identification purposes; all trademarks belong to
+    their respective owners. Provided "as is" with no warranty of any kind — accuracy, uptime, and fitness
+    for any purpose are not guaranteed. The creator and user of this tool assume no liability for any
+    losses, damages, or decisions arising from its use. This tool does not predict outcomes and has no
+    real-money functionality. Gambling carries real financial risk; you are solely responsible for your
+    own decisions and compliance with your local laws and the terms of any site you use.
+  </div>
+</div>
+
+<script>
+// [name, price, riskLevel]  L=Low M=Medium H=High I=Insane
+const CASES = [
+["Fizzy",2963.18,"M"],["Meluhdy V2",59.67,"M"],["Circuit",118.83,"H"],["Thorn",1.25,"I"],["Infrared",218.17,"H"],["Honeycomb",24.79,"H"],
+["Broccoli",90.10,"H"],["Bonfire",4.43,"H"],["Vinyl",81.08,"I"],["Pizza",26.99,"M"],["Island Life",26.31,"H"],["Gym",43.41,"M"],
+["Time Out",78.01,"H"],["1% dream",402.55,"I"],["Lockdown",5016.86,"H"],["Cacao",19.33,"H"],["Architect",46.10,"H"],["Sweet Melody",230.97,"M"],
+["Satellite",16.08,"H"],["Modular",5.14,"M"],["Camper",9.74,"H"],["Caviar",163.78,"H"],["Anchor",57.53,"M"],["Framework",55.30,"M"],
+["Bottled Up",20.33,"M"],["Gifted",14.78,"M"],["Antlers",8.79,"M"],["Shiny Ornament",0.53,"I"],["Village",70.97,"H"],["Full Bag",34.40,"H"],
+["Snowed In",24.20,"H"],["Cozy Fire",35.73,"H"],["Prickly",43.46,"H"],["Lit Up",61.42,"M"],["Indented",5.49,"H"],["Redline",11.20,"H"],
+["Fluid",15.78,"M"],["Crosshair",16.53,"H"],["Rain",4432.09,"M"],["Tea Time",85.05,"M"],["Cactus",99.28,"M"],["Storage",28.89,"H"],
+["Gold Plated",50.76,"H"],["Treasure Chest",235.62,"M"],["Surprise",1102.61,"M"],["Industrial",5.85,"H"],["Monogram",172.39,"M"],["Bonsai",2731.98,"M"],
+["Sampler",8.11,"I"],["Slashed",43.15,"I"],["Serpent",31.39,"I"],["Witchcraft",11.47,"I"],["Bones",21.65,"H"],["Shadows",37.10,"M"],
+["Souls",204.02,"M"],["Wicked",24.80,"L"],["Garden",20.52,"H"],["Electricity",1.42,"H"],["Trapdoor",255.96,"H"],["Cobweb",11.99,"I"],
+["Raven",10.70,"M"],["Otherworldly",2404.89,"M"],["Ouija",0.44,"I"],["Omen",0.37,"I"],["Configuration",1029.93,"L"],["Fabric",750.01,"H"],
+["Dim Sum",75.00,"M"],["Time",94.15,"H"],["Bridged",228.44,"H"],["Templar",2.89,"H"],["Spy",7.48,"I"],["Ritual",33.09,"H"],
+["Gelato",4208.14,"M"],["Obier",453.44,"H"],["Gargoyle",4.61,"L"],["Monument",2.27,"I"],["Iceberg",41.07,"I"],["Fried",281.68,"I"],
+["Defence",12.96,"I"],["Happy Hour",6.06,"I"],["Saloon",15.33,"I"],["Container",48.41,"I"],["Knapsack",50.01,"I"],["Asylum",401.06,"I"],
+["Diver",12.28,"I"],["Duel",11.89,"I"],["Chemistry",18.23,"I"],["Sleepy",18.48,"H"],["Caffeine",37.40,"M"],["joonXO",189.07,"I"],
+["Marathon",28.21,"I"],["Autograph",112.65,"H"],["Steamed",231.11,"H"],["Zipped",276.59,"I"],["Reflection",48.55,"I"],["Recycled",19.02,"I"],
+["Placeholder",53.77,"H"],["Octo",88.88,"H"],["Avocado",36.33,"H"],["Operation Wildfire",7.37,"M"],["Falchion",4.50,"I"],["Fracture",5.42,"I"],
+["Huntsman",13.31,"L"],["CS20",5.11,"I"],["Berserker",24.04,"H"],["Earthquake",113.89,"M"],["Fountain",83.74,"H"],["Freezer",70.58,"I"],
+["Breaker Box",39.47,"H"],["Raft",5.90,"I"],["Fossil",151.73,"I"],["Whale",110.31,"M"],["Cinco",5.00,"H"],["Delivery",70.07,"I"],
+["Elevator",1.07,"I"],["Climbers",23.20,"H"],["Cabana",109.51,"L"],["Dog House",5.99,"H"],["Labyrinth",18.70,"M"],["Soup",35.82,"H"],
+["Elemental",23.89,"M"],["Trampoline",3.49,"H"],["Trap",59.14,"H"],["Loud",27.35,"H"],["Sand Castle",15.00,"H"],["Life's Lemons",45.69,"I"],
+["Birthday",1.00,"I"],["Watch Box",135.93,"H"],["Piggy Bank",100.00,"I"],["Measured",4.74,"L"],["Jenga",6.35,"M"],["Hoops",29.14,"I"],
+["Arcade",39.43,"L"],["Abacus",950.73,"M"],["Graduation",25.03,"M"],["Chandelier",299.62,"M"],["Cream",8.48,"H"],["3DMAX",38.83,"H"],
+["Last Straw",11.34,"I"],["Drutt",140.36,"H"],["Scumbag",102.03,"M"],["RY",62.07,"I"],["Stardust",11.58,"M"],["Fully Looped",120.52,"H"],
+
+["Baggage",18.51,"I"],["Kermieet",41.28,"H"],["Sodiums",112.58,"I"],["Meluhdy",29.82,"I"],["Gonst",21.05,"H"],["Pendulum",43.18,"H"],
+["Tanned",149.75,"M"],["Caged",500.85,"I"],["Charged Up",93.29,"H"],["Half Full",29.79,"H"],["Rare",1.47,"I"],["Tiny Balls",0.80,"H"],
+["Carpenter",50.87,"M"],["Tightrope",239.87,"H"],["Lumberjack",11.03,"M"],["Flimsy",2.44,"I"],["Scrambled",97.41,"M"],["Phoenix",94.05,"H"],
+["Cyber",180.73,"I"],["Clouded",3.33,"I"],["Lost Egg",0.71,"I"],["Blacksmith",130.16,"M"],["Roasted",13.37,"H"],["Apothecary",113.08,"M"],
+["Hard Boiled",43.20,"H"],["Springtime",16.68,"M"],["Rabbit Hole",5.63,"H"],["Carrot Patch",59.52,"M"],["Rug",16.35,"H"],["Helium",0.87,"I"],
+["Sodium",87.05,"H"],["Waterworks",60.57,"I"],["Drizzle",3961.06,"H"],["Calculated",478.61,"I"],["Loco",56.84,"H"],["Mintpod",20.10,"H"],
+["Kntent",45.13,"I"],["Locked Up",123.35,"I"],["Rogue",5.05,"I"],["Headed",40.47,"I"],["Bee Keeper",68.78,"H"],["Warehouse",26.44,"H"],
+["Plunder",44.70,"H"],["Coral",3.63,"H"],["Antique",196.31,"H"],["Raw",208.17,"H"],["Coconut",3760.94,"H"],["Agent",71.54,"H"],
+["Slopes",81.23,"M"],["Headphones",73.42,"H"],["Obie",71.10,"H"],["Game Plan",3.16,"I"],["Birb v2",56.18,"I"],["GK68",313.03,"I"],
+["Cotton Candy",32.08,"H"],["Under Construction",1.72,"H"],["Planter",52.23,"H"],["Surf",6.00,"I"],["Tact",245.15,"M"],["Loba",200.66,"H"],
+["Panic",4.21,"H"],["Jukebox",2.15,"H"],["Outback",18.03,"H"],["Magnetic",46.20,"I"],["Caveman",50.31,"H"],["Aztec Calendar",78.01,"H"],
+["Mumified",6.47,"H"],["Gxlden",30.75,"I"],["Bubble Wrap",0.39,"I"],["Driftwood",4.10,"I"],["Blood Moon",61.47,"H"],["Sharkbite",14.75,"H"],
+["Albotz",46.95,"I"],["Python",30.07,"H"],["Cupid",5.11,"H"],["Psycho",255.83,"H"],["Nightmare",88.28,"H"],["MykalCruz",85.65,"I"],
+["Tionix",9.57,"H"],["Camera Man",17.10,"H"],["Junkyard",11.17,"H"],["Invisibility",15.46,"I"],["Kings Crown",9.85,"I"],["Furball",2.33,"I"],
+["Cowbelly",18.04,"I"],["Kuang",454.71,"H"],["Weekend",6.70,"H"],["Popcorn",99.46,"I"],["Cracked",70.38,"H"],["No Encore",3.86,"I"],
+["Breakfast",36.60,"I"],["Data",26.40,"I"],["Symbiosis",51.06,"I"],["The Keys",25.88,"I"],["Sphinx",297.52,"H"],["Runic",60.20,"H"],
+["Trippy",71.01,"H"],["Citadel",700.00,"M"],["Crunchy",64.91,"I"],["Global",23.97,"I"],["Dinner Time",11.21,"I"],["Kraken",38.13,"I"],
+["Fireworks",0.67,"I"],["Jacked",42.08,"I"],["Coldzera",105.58,"I"],["Shaken",244.35,"H"],["Energy",300.78,"H"],["Checkmate",174.02,"I"],
+["Circus",1916.93,"I"],["Monster Mash",3.08,"I"],["Acupuncture",67.95,"I"],["Macaw",4.92,"I"],["Hunter",1.32,"I"],["Floral",82.86,"M"],
+["Library",68.17,"M"],["Fans",47.05,"H"],["Fishy",32.03,"L"],["Ambulance",4.31,"M"],["Fenced In",7.73,"H"],["Explosive",5.39,"M"],
+["Enforcer",0.50,"M"],["Fruity",9.22,"M"],["Compass",7.32,"I"],["Inception",69.75,"H"],["Spacebound",27.27,"M"],["Spicy",29.38,"H"],
+["Splatter",55.61,"I"],["Farmer",5.79,"H"],["Foggy",2.86,"H"],["Tied Up",70.70,"H"],["Doughnut",97.10,"H"],["Crystal Clear",307.57,"H"],
+["Marble",613.50,"M"],["Mountain",20.45,"H"],["Jingle",28.74,"H"],["Blaze",14.45,"H"],["Cake",272.41,"M"],["Clean",383.54,"M"],
+["SnoopDuris",43.36,"H"],["Eyyyop V2",35.57,"I"],["Vending Machine",471.06,"H"],["Jelly",3600.65,"M"],["Tribal",6.09,"I"],["Wasteland",0.07,"I"],
+["Sauna",62.81,"M"],["Arsenal",1.66,"M"],["Rush B",33.72,"M"],["20/20",86.47,"L"],["Naughty or Nice",3.42,"H"],["Ornamental",5.79,"M"],
+
+["Candy Cane",0.57,"I"],["Zoom",1.81,"M"],["The Night Before",5.86,"H"],["Snowball",0.87,"I"],["Locomotive",12.81,"M"],["Goalie",225.10,"M"],
+["Broadcast",3172.51,"M"],["Juicer",2523.83,"M"],["Tropical",4.47,"H"],["Wreath",3.93,"H"],["Scrooge",25.24,"H"],["Vault",51.18,"H"],
+["X-Mas Spirit",1561.15,"M"],["Voyage",80.05,"M"],["Igloo",19.66,"I"],["Urban",27.59,"M"],["Timber",30.71,"H"],["Bells & Shells",35.77,"M"],
+["The List",36.43,"M"],["Mellow",0.23,"L"],["Eco Round",0.39,"H"],["Chef",140.28,"M"],["Mini Schneck",44.44,"I"],["Biba v2",145.47,"I"],
+["Kranzz",70.93,"I"],["Silent Night",10.46,"M"],["Sleighed",1111.11,"M"],["All Coal",5.58,"H"],["Merry Marksman",65.78,"M"],["Aurora",31.54,"H"],
+["Steampunk",0.17,"I"],["Vortex",0.13,"I"],["Maze",5.45,"M"],["Lost City",18.23,"H"],["Griefer",44.98,"L"],["Frontline",48.57,"I"],
+["Headshot",22.42,"M"],["Weaponized",8.96,"H"],["Prismatic",11.60,"H"],["Botairtx",250.13,"H"],["Party",142.59,"H"],["Rage Quit",13.39,"H"],
+["VAC",21.63,"H"],["Schrodinger",9.80,"H"],["Justice",4.77,"M"],["Clip It",1.09,"H"],["Permadeath",22.74,"M"],["Bounty Hunter",109.38,"M"],
+["Black Lotus",28.65,"L"],["Espresso",11.25,"H"],["Ghouls",140.00,"M"],["Haunted House",92.07,"M"],["Jack-o-lantern",25.86,"I"],["Mortis",3.11,"I"],
+["Shattered",58.81,"M"],["Nap Time",18.61,"I"],["Backstab",135.56,"H"],["Candy Corn",1.50,"L"],["Bloody",3.32,"H"],["The Brew",4.49,"I"],
+["Vampire's Kiss",8.62,"H"],["Scream",12.45,"H"],["Trick or Treat",17.11,"M"],["Frankenstein",27.50,"M"],["Casket",49.22,"M"],["Spray n' Pray",65.36,"H"],
+["Siren",85.28,"H"],["Black Ice",186.84,"M"],["Carnivore",260.23,"H"],["Ghosted",574.91,"M"],["High Voltage",1806.74,"H"],["Plague Doctor",9.15,"H"],
+["Revolt",6.52,"H"],["Alchemy",6.71,"M"],["Sabotage",10.11,"H"],["Hologram",10.82,"H"],["Mad Scientist",16.11,"H"],["Forbidden Forest",3.66,"H"],
+["Birb",77.23,"H"],["Voodoo",80.94,"M"],["SchneckyIRL",444.44,"H"],["KevinHighroller",154.50,"I"],["Hyper",41.84,"H"],["GGE",27.54,"I"],
+["Pink Craze",0.35,"H"],["Battle Ready",0.60,"H"],["Big Brain",2.23,"H"],["Cursed",5.06,"H"],["Gunslinger",7.02,"H"],["Fortune Teller",8.20,"M"],
+["High Noon",10.55,"M"],["The Reaper",11.40,"M"],["Jumiii",18.75,"H"],["Paladin",32.85,"M"],["Ninja",41.39,"H"],["Resurrection",84.19,"H"],
+["Shwifty",103.34,"M"],["Valhalla",194.37,"M"],["Time Traveler",536.63,"M"],["Mechanical",1.00,"I"],["KennyP",8.57,"H"],["Bouchonnoir",15.31,"I"],
+["Cheddarbob",20.88,"I"],["Platty's Paradise",23.09,"H"],["L1EOK",89.71,"H"],["Beast 2.0",90.26,"H"],["5% Faded",7.27,"I"],["Enhanced",14.50,"I"],
+["Seasonal",15.83,"M"],["Construction Site",16.05,"H"],["Catacombs",25.16,"H"],["Nanotech",60.12,"H"],["Precision",70.71,"H"],["Vacation",2201.01,"M"],
+["Compbros",14.48,"I"],["Snatchers",97.08,"H"],["Dumpster Dive",0.47,"H"],["Cushioned",1.27,"H"],["Zapped",3.70,"H"],["Excalibur",7.13,"H"],
+
+["Deep Dive",15.23,"H"],["Warzone",22.58,"M"],["Jorgo",27.02,"H"],["5% Rifle",30.26,"I"],["Truency",51.81,"M"],["Frostbite",58.00,"L"],
+["Jules",76.12,"I"],["Quantum",2327.99,"M"],["Smack",93.32,"H"],["Enchanted",150.50,"H"],["Rifles Only",133.94,"M"],["Stormy",66.02,"M"],
+["Sahara",53.21,"L"],["Geometric",47.83,"H"],["Sun & Moon",46.25,"H"],["Musical",42.01,"H"],["Crystalized",29.43,"M"],["Umbrella",26.88,"M"],
+["Celestial",16.87,"M"],["Typhoon",16.80,"M"],["Nuclear",9.69,"H"],["Flammable",8.04,"H"],["Blacked Out",3.28,"H"],["Acid",2.96,"H"],
+["Arctic",21.42,"M"],["Biba",128.65,"I"],["EyyyOP",146.31,"H"],["Zoid",420.11,"I"],["Reptilian",44.49,"H"],["Expensive Taste",22.65,"M"],
+["Framed",77.26,"H"],["Hooked",112.19,"M"],["Surveillance",20.42,"H"],["Wizardry",50.92,"H"],["X",59.22,"M"],["Ventilated",91.67,"H"],
+["Low Battery",19.44,"H"],["Colorblind",24.58,"H"],["Iced out",1904.01,"M"],["Toss Up",6.43,"L"],["Emergency",9.48,"M"],["Anarchist",11.18,"H"],
+["High Impact",38.86,"H"],["Schooled",79.90,"H"],["Mythology",495.26,"H"],["El Diablo",780.48,"H"],["Pixelated",2000.45,"M"],["Black Hole",1096.41,"M"],
+["High Stakes",1701.25,"H"],["Primitive",1742.06,"M"],["High Roller",2109.41,"M"],["Sticky",45.07,"M"],["Golden Touch",840.71,"M"],["Djinn",1542.52,"M"],
+["Glass Cannon",1419.47,"M"],["Timeless",88.60,"M"],["Boxed Up",4.86,"M"],["Tool Box",18.37,"M"],["Soggy Swamp",4.02,"H"],["Silenced",4.76,"H"],
+["Melted",4.27,"H"],["Rags 2 Riches",1.72,"H"],["Sting",9.63,"H"],["Druidic",281.29,"M"],["Camouflage",10.19,"H"],["Gold Rush",7.98,"H"],
+["Opulent",724.55,"M"],["X-Ray",1105.39,"M"],["Sunrise",2.57,"I"],["Sunset",4.97,"H"],["5% Gems",12.97,"H"],["Warning",6.89,"H"],
+["Symmetrical",5.24,"H"],["Upside Down",9.98,"M"],["The Ladder",2.64,"H"],["Virus",1614.59,"M"],["Printer",1700.49,"M"],["Vaporwave",13.26,"M"],
+["Prehistoric",8.94,"H"],["Animals",7.85,"H"],["Candy Shop",2.11,"H"],["Broken",0.75,"I"],["Trenches",1258.15,"H"],["Old School",1521.98,"M"],
+["Webbed",1508.18,"H"],["Benny",96.23,"I"],["Raider",4.25,"I"],["Stop N' Go",28.58,"H"],["Wall Street",18.46,"H"],["5% Gloves",13.29,"I"],
+["5% Dream",9.15,"I"],["The Subs",31.11,"H"],["Cold Plunge",83.14,"M"],["Shank You",15.53,"H"],["Gumbo",54.98,"M"],["Dadosch",59.11,"H"],
+["Twister",14.99,"H"],["Smackdown",13.11,"H"],["Eclipse",72.43,"H"],["Addicted",164.71,"I"],["Juicy",281.23,"M"],["Grim",377.40,"H"],
+["Anti-Matter",840.08,"M"],["imspencerrr",51.31,"M"],["BCX",40.23,"I"],["Lazard",43.54,"H"],["PappaKubasso",107.01,"H"],["Mr.Tree",130.11,"H"],
+["Turbo",6.56,"I"],["Switcheroo",7.58,"I"],["Slaughter House",13.73,"I"],["Bright Lights",5.94,"I"],["5% Lore",6.25,"I"],["1-Handed",6.23,"I"],
+["GAS",163.01,"H"],["Boosted",923.99,"H"],["Rocket Fuel",1024.51,"H"],["The Sauce",1217.90,"M"],["Only Gems",1406.65,"M"],["Stellar",1010.96,"M"],
+["Apex",1015.99,"H"],["Sweets",1479.31,"M"],["Olympus",1162.65,"H"],["Plutonium",1355.91,"H"],["Banksy",311.00,"M"],["Elder",15.20,"I"],
+["KingGee",19.37,"I"],["Jonkenn",108.05,"I"],["KevinLowRoller",54.54,"I"],["Metal Monkey",50.24,"H"],["Wear & Tear",36.68,"H"],["WastedWagers",34.54,"I"],
+["The Legion",1333.37,"M"],["SoulStealer",144.80,"H"],["SLAX",57.57,"H"],["Sideline",416.60,"M"],["RobZn",38.44,"I"],["Red Carpet",801.68,"M"],
+["Pingendli",98.40,"H"],["PhibbiX",28.54,"H"],["Only Blues",2.49,"H"],["Olkuna",22.62,"H"],["Mixology",161.57,"L"],["Mercy",83.31,"M"],
+["Massive Balls",1002.13,"H"],["JordanR",69.89,"H"],["Heads or Tails",1.76,"L"],["Float",61.86,"H"],["Fight Night",1001.20,"M"],["Bump the Profits",292.71,"M"],
+
+["BonkIsSwag",25.91,"H"],["Beast",74.79,"M"],["AWP vs Rifle",127.52,"I"],["25Logan25",25.25,"I"],["Swerve",20.23,"H"],["Rubble",10.19,"H"],
+["Recon",4.71,"H"],["Laminated",27.92,"M"],["5% Asiimov",13.11,"I"],["Thumbprint",3.58,"I"],["The Graveyard",8.39,"I"],["Stick Up",19.70,"H"],
+["Sale",3.99,"H"],["Monochrome",19.62,"H"],["Luck Is In The Air",0.57,"I"],["Little Balls",8.07,"H"],["Juan Diego",64.22,"M"],["Heater",8.80,"H"],
+["Dollar Store",0.88,"M"],["Warm Up",1.15,"M"],["Leprechaun",45.14,"M"],["Radioactive",20.00,"H"],["Green Screen",67.74,"M"],["Crown",39.29,"M"],
+["zZz",1.42,"H"],["Sticks",1.76,"I"],["Pyramids",12.72,"H"],["Confusion",2.40,"I"],["White Night",5.57,"H"],["Hqteful",17.61,"H"],
+["Wild",2.44,"H"],["Precipitation",6.10,"M"],["Katsu",11.96,"H"],["Hells Itch",1.98,"H"],["Code Red",11.99,"M"],["Charisma",403.98,"M"],
+["Bloom",17.87,"M"],["Ballin' on a Budget",2.78,"M"],["Demon",666.66,"M"],["Kalashnikov",601.66,"H"],["Dig Deep",210.06,"H"],["Structures",149.81,"M"],
+["Bricked Up",291.69,"L"],["Cheesy",7.92,"H"],["Make That Bread",16.51,"L"],["Least Resistance",215.83,"H"],["Tripwire",165.07,"H"],["Team T",21.03,"H"],
+["The Tourist",31.01,"M"],["Dirty",8.49,"M"],["On a Budget",4.28,"M"],["50/50 Duel",85.84,"L"],["Spoils of War",172.68,"M"],["Budget 10% Knife",12.26,"H"],
+["Pocket Burner",0.29,"I"],["Icy Hot",305.57,"M"],["Hardened",125.52,"M"],["Faded",353.08,"L"],["Claws V Wings",420.93,"M"],["Bruised",190.41,"M"],
+["Blue World",0.80,"I"],["Big Balls",100.07,"H"],["10% Gloves",14.25,"H"],["Zen",14.17,"M"],["Rebel",22.29,"M"],["Only AK's",72.44,"M"],
+["10% Knife",24.24,"H"],["Generator",132.23,"H"],["Fidget Spinner",15.70,"H"],["Deep Ocean",24.06,"M"],["Dark Skies",31.48,"M"],["10% Mixer",16.67,"H"],
+["Based",116.80,"M"],["Art Gallery",23.82,"M"],["Handle with Care",326.30,"M"],["CT Sided",35.71,"M"],["Dune Battle",10.36,"M"],["10% USP-S",3.05,"H"],
+["Grippers",0.91,"I"],["Glorious",2.11,"H"],["Get Lucky",10.94,"I"],["Dead End",1.42,"H"],["Art",4.00,"H"],["10% Glock",3.03,"H"],
+["Hail Mary",407.51,"M"],["Mental",177.77,"M"],["Skeletons",320.74,"L"],["Jungle King",125.03,"M"],["The Creator",454.24,"L"],["Big Time",900.42,"M"],
+["Smooth Seas",55.18,"M"],["Pointy",301.08,"L"],["Meadows",247.95,"L"],["Grass Greener",299.90,"L"],["Galaxy",600.82,"M"],["Chaos",300.30,"L"],["Assassin",519.17,"L"]
+];
+
+const RISK_LABEL = {L:"Low", M:"Medium", H:"High", I:"Insane"};
+
+const MAIN_MODES = [
+  {group:"Team", variant:"2v2"},
+  {group:"Team", variant:"3v3"},
+];
+
+const ICON_RULES = [
+  [/fire|flame|blaze|inferno|\bhot\b|spicy|phoenix|dragon|torch/i,"🔥"],
+  [/ice|snow|frost|frozen|arctic|igloo|blizzard|winter|glacier|chill|cold/i,"❄️"],
+  [/water|ocean|\bsea\b|aqua|wave|rain|drizzle|flood|storm|splash|dive/i,"🌊"],
+  [/money|cash|gold|rich|treasure|bank|vault|coin|piggy|dollar|wealth|budget|profit/i,"💰"],
+  [/gem|diamond|crystal|jewel|sparkle/i,"💎"],
+  [/skull|death|grave|ghost|zombie|vampire|witch|dark|cursed|haunted|demon|devil|reaper|nightmare/i,"💀"],
+  [/love|heart|cupid|valentine/i,"❤️"],
+  [/christmas|xmas|santa|candy cane|wreath|snowman|holiday|sleigh/i,"🎄"],
+  [/halloween|pumpkin|spooky|trick/i,"🎃"],
+  [/\bcat\b|kitten|feline/i,"🐱"],
+  [/\bdog\b|puppy|canine/i,"🐶"],
+  [/bird|goalie|falcon|eagle/i,"🐦"],
+  [/whale|kraken|shark|fish/i,"🐋"],
+  [/bear|panda/i,"🐻"],
+  [/lion|tiger/i,"🦁"],
+  [/weapon|\bgun\b|rifle|pistol|sword|blade|knife|awp|\bak\b/i,"🔫"],
+  [/tech|cyber|robot|computer|data|digital|circuit|hologram/i,"💻"],
+  [/space|star|galaxy|planet|rocket|alien|cosmic|astro/i,"🚀"],
+  [/plant|garden|flower|tree|leaf|forest|jungle|bonsai/i,"🌿"],
+  [/music|song|melody|tune|jukebox|headphones|vinyl/i,"🎵"],
+  [/sport|\bball\b|game|goal|basketball|hoops/i,"⚽"],
+  [/pizza|cake|candy|donut|cheese|bread|food|cream|gelato|soup|cotton candy/i,"🍕"],
+  [/lightning|electric|volt|thunder|zap|energy/i,"⚡"],
+  [/\bkey\b|lock|safe/i,"🔑"],
+  [/party|birthday|balloon|circus|carnival/i,"🎉"],
+  [/king|crown|royal|throne/i,"👑"],
+];
+const FALLBACK_ICONS = ["📦","🎁","🧰","⚱️","🗃️","🧳","🪆","🎒"];
+
+function iconFor(name){
+  for(const [re,emoji] of ICON_RULES){ if(re.test(name)) return emoji; }
+  let h = 0;
+  for(let i=0;i<name.length;i++) h += name.charCodeAt(i);
+  return FALLBACK_ICONS[h % FALLBACK_ICONS.length];
+}
+
+document.getElementById("count-info").textContent = `${CASES.length} cases loaded.`;
+
+function shuffled(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function pickForBudget(pool, targetCount, budget){
+  // Max achievable count: taking the cheapest items first is provably optimal
+  // for "most items whose sum <= budget", so this gives the true ceiling.
+  const cheapestFirst = pool.slice().sort((a,b) => a[1] - b[1]);
+  let feasibleCount = 0, cheapSum = 0;
+  for(const c of cheapestFirst){
+    if(feasibleCount >= targetCount) break;
+    if(cheapSum + c[1] > budget) break;
+    cheapSum += c[1];
+    feasibleCount++;
+  }
+  if(feasibleCount === 0) return null;
+
+  // Now randomly sample combos that hit that exact count, keeping the
+  // highest-spending one for variety (falls back to the cheapest-first set
+  // if random sampling can't find a full-count fit in time).
+  let best = null;
+  for(let attempt=0; attempt<60; attempt++){
+    const p = shuffled(pool);
+    const picks = [];
+    let total = 0;
+    for(const c of p){
+      if(picks.length >= feasibleCount) break;
+      if(total + c[1] <= budget){ picks.push(c); total += c[1]; }
+    }
+    if(picks.length === feasibleCount && (!best || total > best.total)){
+      best = {picks, total};
+    }
+  }
+  if(!best){
+    best = {picks: cheapestFirst.slice(0, feasibleCount), total: cheapSum};
+  }
+  return best;
+}
+
+function buildReelItemHTML([name, price, risk]){
+  return `<div class="reel-item">
+    <div class="reel-icon">${iconFor(name)}</div>
+    <div class="reel-name">${name}</div>
+    <div class="reel-price">${price.toFixed(2)}</div>
+    <div class="badge ${risk}">${RISK_LABEL[risk]}</div>
+  </div>`;
+}
+
+function animateReel(reelEl, fillerPool, finalCase, itemHeight, duration){
+  const fillerCount = 16;
+  const items = [];
+  for(let i=0;i<fillerCount;i++){
+    items.push(fillerPool[Math.floor(Math.random()*fillerPool.length)]);
+  }
+  items.push(finalCase);
+
+  const track = reelEl.querySelector(".reel-track");
+  track.innerHTML = items.map(buildReelItemHTML).join("");
+  track.style.transition = "none";
+  track.style.transform = "translateY(0px)";
+  void track.offsetHeight; // force reflow
+  requestAnimationFrame(() => {
+    track.style.transition = `transform ${duration}ms cubic-bezier(.14,.66,.2,1)`;
+    track.style.transform = `translateY(-${itemHeight * (items.length - 1)}px)`;
+  });
+}
+
+let spinning = false;
+
+function spin(){
+  if(spinning) return;
+
+  const targetCount = Math.max(1, Math.min(10, parseInt(document.getElementById("numCases").value) || 1));
+  const minRaw = document.getElementById("minPrice").value;
+  const maxRaw = document.getElementById("maxPrice").value;
+  const budgetRaw = document.getElementById("budget").value;
+  let minPrice = minRaw === "" ? null : parseFloat(minRaw);
+  let maxPrice = maxRaw === "" ? null : parseFloat(maxRaw);
+  const budget = budgetRaw === "" ? null : parseFloat(budgetRaw);
+  if(minPrice !== null && maxPrice !== null && minPrice > maxPrice){
+    [minPrice, maxPrice] = [maxPrice, minPrice];
+  }
+  const checkedRisks = Array.from(document.querySelectorAll(".risk-toggles input:checked")).map(el => el.value);
+  const risks = checkedRisks.length ? checkedRisks : ["L","M","H","I"];
+
+  const errorEl = document.getElementById("errorMsg");
+  errorEl.style.display = "none";
+
+  let pool = CASES.filter(c =>
+    risks.includes(c[2]) &&
+    (minPrice === null || c[1] >= minPrice) &&
+    (maxPrice === null || c[1] <= maxPrice)
+  );
+
+  if(pool.length === 0){
+    errorEl.textContent = "No cases match those filters — widen the price range or risk levels.";
+    errorEl.style.display = "block";
+    return;
+  }
+
+  let chosen;
+  if(budget !== null){
+    const result = pickForBudget(pool, targetCount, budget);
+    if(!result){
+      errorEl.textContent = "No combination of cases fits that budget with the current filters — try raising it.";
+      errorEl.style.display = "block";
+      return;
+    }
+    chosen = result.picks;
+    if(chosen.length < targetCount){
+      errorEl.textContent = `Only ${chosen.length} of ${targetCount} cases fit that budget with the current price/risk filters — that's the mathematical max, not a bug.`;
+      errorEl.style.color = "var(--muted)";
+      errorEl.style.display = "block";
+    } else {
+      errorEl.style.color = "var(--I)";
+    }
+  } else {
+    chosen = shuffled(pool).slice(0, targetCount);
+    while(chosen.length < targetCount){
+      chosen.push(pool[Math.floor(Math.random()*pool.length)]);
+    }
+  }
+
+  spinning = true;
+  document.getElementById("spinBtn").disabled = true;
+  document.getElementById("resultsPanel").style.display = "block";
+
+  const grid = document.getElementById("cardGrid");
+  grid.innerHTML = "";
+  let maxDuration = 0;
+  chosen.forEach((c, idx) => {
+    const reel = document.createElement("div");
+    reel.className = "reel";
+    reel.innerHTML = `<div class="reel-track"></div>`;
+    grid.appendChild(reel);
+    const duration = 1100 + idx*220 + Math.random()*200;
+    maxDuration = Math.max(maxDuration, duration);
+    animateReel(reel, pool, c, 190, duration);
+  });
+
+  const total = chosen.reduce((s,c) => s + c[1], 0);
+  const mode = MAIN_MODES[Math.floor(Math.random()*MAIN_MODES.length)];
+  const crazy = Math.random() < 0.5;
+  const jackpot = Math.random() < 0.5;
+  let extraLabel;
+  if(crazy && jackpot) extraLabel = "Crazy Mode + Jackpot Mode";
+  else if(crazy) extraLabel = "Crazy Mode";
+  else if(jackpot) extraLabel = "Jackpot Mode";
+  else extraLabel = "Normal (no extra toggle)";
+
+  setTimeout(() => {
+    document.getElementById("totalVal").textContent = total.toFixed(2);
+    document.getElementById("modeMain").textContent = mode.variant;
+    document.getElementById("modeExtra").textContent = extraLabel;
+    spinning = false;
+    document.getElementById("spinBtn").disabled = false;
+  }, maxDuration + 150);
+}
+
+document.getElementById("spinBtn").addEventListener("click", spin);
+document.getElementById("rerollBtn").addEventListener("click", spin);
+</script>
+</body>
+</html>

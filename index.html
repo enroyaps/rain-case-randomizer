@@ -64,28 +64,23 @@
     border-top:1px solid var(--border);padding-top:14px;
   }
 
-  .slot-row{display:flex;gap:14px;flex-wrap:wrap;margin:16px 0;}
+  .slot-row{display:flex;gap:16px;flex-wrap:wrap;margin:16px 0;}
   .reel{
-    width:150px;height:190px;overflow:hidden;border:2px solid var(--border);border-radius:12px;
+    width:220px;height:255px;overflow:hidden;border:2px solid var(--border);border-radius:14px;
     background:var(--panel2);position:relative;
   }
   .reel::after{
     content:""; position:absolute; inset:0;
     box-shadow: inset 0 22px 18px -18px #000, inset 0 -22px 18px -18px #000;
-    pointer-events:none; border-radius:10px;
+    pointer-events:none; border-radius:12px;
   }
   .reel-track{display:flex;flex-direction:column;}
   .reel-item{
-    height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:6px;padding:10px;text-align:center;
+    height:255px;display:flex;align-items:center;justify-content:center;
+    padding:8px;text-align:center;
   }
   .reel-icon{font-size:2.6rem;line-height:1;}
-  .reel-icon-img{width:72px;height:72px;object-fit:contain;border-radius:8px;}
-  .reel-name{font-weight:600;font-size:0.82rem;}
-  .reel-price{color:var(--gold);font-size:0.82rem;}
-  .badge{font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;color:#0b1220;}
-  .badge.L{background:var(--L);} .badge.M{background:var(--M);}
-  .badge.H{background:var(--H);} .badge.I{background:var(--I);}
+  .reel-icon-img{width:100%;height:100%;object-fit:contain;border-radius:8px;}
 
   .total{font-size:1.05rem;margin-top:6px;}
   .total b{color:var(--gold);}
@@ -151,6 +146,7 @@
 
     <div class="mode-box">
       <div class="label">Suggested battle setup</div>
+      <div class="value" id="modeCases" style="font-size:1.05rem;color:var(--text);"></div>
       <div class="value" id="modeMain"></div>
       <div id="modeExtra" style="color:var(--muted);font-size:0.85rem;"></div>
     </div>
@@ -389,10 +385,7 @@ function pickForBudget(pool, targetCount, budget){
 
 function buildReelItemHTML([name, price, risk]){
   return `<div class="reel-item">
-    ${ICON_FILES[name] ? `<img class="reel-icon-img" src="icons/${encodeURIComponent(ICON_FILES[name])}" alt="">` : `<div class="reel-icon">${iconFor(name)}</div>`}
-    <div class="reel-name">${name}</div>
-    <div class="reel-price">${price.toFixed(2)}</div>
-    <div class="badge ${risk}">${RISK_LABEL[risk]}</div>
+    ${ICON_FILES[name] ? `<img class="reel-icon-img" src="icons/${encodeURIComponent(ICON_FILES[name])}" alt="${name}">` : `<div class="reel-icon">${iconFor(name)}</div>`}
   </div>`;
 }
 
@@ -485,7 +478,7 @@ function spin(){
     grid.appendChild(reel);
     const duration = 1100 + idx*220 + Math.random()*200;
     maxDuration = Math.max(maxDuration, duration);
-    animateReel(reel, pool, c, 190, duration);
+    animateReel(reel, pool, c, 255, duration);
   });
 
   const total = chosen.reduce((s,c) => s + c[1], 0);
@@ -500,6 +493,7 @@ function spin(){
 
   setTimeout(() => {
     document.getElementById("totalVal").textContent = total.toFixed(2);
+    document.getElementById("modeCases").textContent = chosen.map(c => c[0]).join(", ");
     document.getElementById("modeMain").textContent = mode.variant;
     document.getElementById("modeExtra").textContent = extraLabel;
     spinning = false;

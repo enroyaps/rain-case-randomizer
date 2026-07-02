@@ -130,6 +130,7 @@
         <div class="label">Result</div>
         <div id="resultText" class="value"></div>
         <div id="battleCasesArea" style="display:none;margin-top:16px;text-align:left;">
+          <div id="battleCasesNames" style="color:var(--text);font-size:0.95rem;font-weight:700;margin-bottom:6px;user-select:all;"></div>
           <div id="battleCasesMeta" style="color:var(--muted);font-size:0.85rem;margin-bottom:10px;"></div>
           <div id="battleCasesGrid" class="battle-cases-grid"></div>
         </div>
@@ -335,9 +336,11 @@
       const casesArea = document.getElementById("battleCasesArea");
       const casesGrid = document.getElementById("battleCasesGrid");
       const casesMeta = document.getElementById("battleCasesMeta");
+      const casesNames = document.getElementById("battleCasesNames");
       casesArea.style.display = "none";
       casesGrid.innerHTML = "";
       casesMeta.textContent = "";
+      casesNames.textContent = "";
 
       setTimeout(async () => {
         document.getElementById("rollPrizeBtn").disabled = false;
@@ -360,6 +363,7 @@
               data.borrowPercent ? `Borrow ${data.borrowPercent}% (paid ${data.payAmount})` : null
             ].filter(Boolean).join(" + ");
             casesMeta.textContent = `${data.battleSize || ""} ${data.baseMode || ""}${extras ? " + " + extras : ""} — total ${data.total} coins`;
+            casesNames.textContent = data.cases.join(", ");
             casesGrid.innerHTML = data.cases.map(name => {
               const file = ICON_FILES[name];
               return `<div class="battle-case-card">${file ? `<img src="icons/${encodeURIComponent(file)}" alt="">` : name}</div>`;

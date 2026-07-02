@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Draw Host</title>
+<style>
+  :root{
+    --bg:#060309; --panel:#140b22; --panel2:#0d0716; --border:#2d1c46;
+    --gold:#9b5cff; --goldLight:#cba3ff; --cyan:#34e0ff; --text:#f1ecfb; --muted:#a99bd1;
+    --err:#f4433f; --ok:#4ade80;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:radial-gradient(circle at top,#2a1345,var(--bg) 60%);
+    color:var(--text); min-height:100vh; padding:24px;
+  }
+  .wrap{max-width:720px;margin:0 auto;}
+  .center-card{
+    max-width:400px;margin:80px auto;background:var(--panel);border:1px solid var(--border);
+    border-radius:16px;padding:32px;text-align:center;
+  }
+  h1{font-size:1.3rem;margin:0 0 20px;color:var(--cyan);}
+  h2{font-size:1.05rem;margin:0 0 14px;color:var(--cyan);}
+  input, textarea{
+    width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);
+    border-radius:8px;padding:10px 12px;font-size:0.9rem;margin-bottom:10px;font-family:inherit;
+  }
+  textarea{min-height:90px;resize:vertical;}
+  button{
+    background:linear-gradient(180deg,var(--goldLight),var(--gold));color:#fbf7ff;
+    border:none;font-weight:800;padding:12px 20px;border-radius:10px;font-size:0.92rem;cursor:pointer;
+    letter-spacing:.03em;
+  }
+  button:hover:not(:disabled){filter:brightness(1.08);}
+  button:disabled{opacity:0.45;cursor:default;}
+  button.secondary{background:transparent;color:var(--gold);border:1px solid var(--gold);}
+  .status{margin-top:8px;font-size:0.85rem;min-height:1.2em;}
+  .status.ok{color:var(--ok);} .status.err{color:var(--err);} .status.muted{color:var(--muted);}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:20px;}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;color:var(--muted);font-size:0.85rem;}
+  .queue-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;min-height:32px;}
+  .queue-chip{background:var(--panel2);border:1px solid var(--border);padding:5px 10px;border-radius:20px;font-size:0.82rem;}
+  .reel{
+    width:100%;height:64px;overflow:hidden;border:2px solid var(--border);border-radius:10px;
+    background:var(--panel2);position:relative;margin-bottom:14px;
+  }
+  .reel::after{
+    content:"";position:absolute;inset:0;
+    box-shadow:inset 0 12px 12px -10px #000, inset 0 -12px 12px -10px #000;
+    pointer-events:none;border-radius:8px;
+  }
+  .reel-track{display:flex;flex-direction:column;}
+  .reel-item{height:64px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;}
+  .result-box{
+    margin-top:18px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;
+    padding:16px;text-align:center;
+  }
+  .result-box .label{color:var(--muted);font-size:0.78rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
+  .result-box .value{font-size:1.2rem;font-weight:800;color:var(--goldLight);}
+  .result-box a{display:inline-block;margin-top:12px;color:var(--cyan);font-weight:700;text-decoration:none;}
+  .setup-warning{
+    background:#2c1a12;border:1px solid #6b4a1a;color:#f4c778;padding:14px;border-radius:10px;
+    font-size:0.82rem;text-align:left;line-height:1.5;max-width:400px;margin:80px auto;
+  }
+</style>
+</head>
+<body>
+
+  <div id="setupWarning" class="setup-warning" style="display:none;">
+    Firebase isn't configured yet — fill in <code>firebase-config.js</code> first.
+  </div>
+
+  <div class="center-card" id="loginCard" style="display:none;">
+    <h1>Host Login</h1>
+    <input id="email" type="email" placeholder="Email" autocomplete="username">
+    <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+    <button id="loginBtn" style="width:100%;">SIGN IN</button>
+    <div id="loginStatus" class="status"></div>
+  </div>
+
+  <div class="wrap" id="dashboard" style="display:none;">
+    <div class="topbar">
+      <span>Signed in as <span id="whoami"></span></span>
+      <button class="secondary" id="signOutBtn">Sign out</button>
+    </div>
+
+    <div class="panel">
+      <h2>Weekly Whitelist</h2>
+      <textarea id="whitelistBox" placeholder="One Rain ID per line or comma-separated, e.g. 7JEU96GX"></textarea>
+      <button id="saveWhitelistBtn">Save Whitelist</button>
+      <div id="whitelistStatus" class="status"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Live Queue (<span id="queueCount">0</span>)</h2>
+      <div id="queueList" class="queue-list"></div>
+      <button class="secondary" id="resetRoundBtn">Reset Round (clears queue)</button>
+      <div id="resetStatus" class="status"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Draw</h2>
+      <div class="reel" id="winnerReel"><div class="reel-track" id="winnerTrack"></div></div>
+      <button id="rollWinnerBtn">🎰 Roll Winner</button>
+
+      <div class="reel" id="prizeReel" style="margin-top:20px;"><div class="reel-track" id="prizeTrack"></div></div>
+      <button id="rollPrizeBtn" disabled>🎰 Roll Prize</button>
+
+      <div id="resultBox" class="result-box" style="display:none;">
+        <div class="label">Result</div>
+        <div id="resultText" class="value"></div>
+        <a id="battleCallLink" href="index.html" target="_blank" style="display:none;">Open Case Picker for this Battle →</a>
+      </div>
+    </div>
+  </div>
+
+<script type="module">
+  import { firebaseConfig, CONFIG_IS_SET } from "./firebase-config.js";
+
+  if(!CONFIG_IS_SET){
+    document.getElementById("setupWarning").style.display = "block";
+  } else {
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js");
+    const {
+      getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+    } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js");
+    const {
+      getFirestore, doc, getDoc, setDoc, collection, onSnapshot, getDocs, deleteDoc
+    } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js");
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const loginCard = document.getElementById("loginCard");
+    const dashboard = document.getElementById("dashboard");
+    const loginStatus = document.getElementById("loginStatus");
+
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      loginStatus.textContent = "Signing in...";
+      loginStatus.className = "status muted";
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (err) {
+        loginStatus.textContent = "Sign-in failed — check email/password.";
+        loginStatus.className = "status err";
+      }
+    });
+
+    document.getElementById("signOutBtn").addEventListener("click", () => signOut(auth));
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loginCard.style.display = "none";
+        dashboard.style.display = "block";
+        document.getElementById("whoami").textContent = user.email;
+        initDashboard();
+      } else {
+        loginCard.style.display = "block";
+        dashboard.style.display = "none";
+      }
+    });
+
+    let dashboardInitialized = false;
+    let currentEntries = [];
+    let currentWinner = null;
+
+    function initDashboard(){
+      if(dashboardInitialized) return;
+      dashboardInitialized = true;
+
+      // Load current whitelist into the textarea
+      getDoc(doc(db, "whitelist", "current")).then(snap => {
+        if(snap.exists()){
+          document.getElementById("whitelistBox").value = (snap.data().ids || []).join("\n");
+        }
+      });
+
+      document.getElementById("saveWhitelistBtn").addEventListener("click", async () => {
+        const raw = document.getElementById("whitelistBox").value;
+        const ids = [...new Set(
+          raw.split(/[\n,]/).map(s => s.trim().toUpperCase().replace(/^RN-?/, "")).filter(Boolean)
+        )];
+        const statusEl = document.getElementById("whitelistStatus");
+        try{
+          await setDoc(doc(db, "whitelist", "current"), { ids });
+          statusEl.textContent = `Saved ${ids.length} IDs.`;
+          statusEl.className = "status ok";
+        } catch(err){
+          statusEl.textContent = "Failed to save — try again.";
+          statusEl.className = "status err";
+        }
+      });
+
+      // Live queue listener
+      onSnapshot(collection(db, "entries"), (snapshot) => {
+        currentEntries = snapshot.docs.map(d => d.data().rainId);
+        document.getElementById("queueCount").textContent = currentEntries.length;
+        const listEl = document.getElementById("queueList");
+        listEl.innerHTML = currentEntries.map(id => `<div class="queue-chip">${id}</div>`).join("") || `<span style="color:var(--muted);font-size:0.85rem;">No entries yet.</span>`;
+        document.getElementById("rollWinnerBtn").disabled = currentEntries.length === 0;
+      });
+
+      document.getElementById("resetRoundBtn").addEventListener("click", async () => {
+        const statusEl = document.getElementById("resetStatus");
+        statusEl.textContent = "Clearing...";
+        statusEl.className = "status muted";
+        const snap = await getDocs(collection(db, "entries"));
+        await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+        currentWinner = null;
+        document.getElementById("resultBox").style.display = "none";
+        document.getElementById("rollPrizeBtn").disabled = true;
+        statusEl.textContent = "Queue cleared.";
+        statusEl.className = "status ok";
+      });
+
+      document.getElementById("rollWinnerBtn").addEventListener("click", rollWinner);
+      document.getElementById("rollPrizeBtn").addEventListener("click", rollPrize);
+    }
+
+    // --- secure randomness helpers ---
+    function randomIndex(n){
+      const buf = new Uint32Array(1);
+      crypto.getRandomValues(buf);
+      return buf[0] % n;
+    }
+    function randomFloat(){
+      const buf = new Uint32Array(1);
+      crypto.getRandomValues(buf);
+      return buf[0] / (0xFFFFFFFF + 1);
+    }
+    const PRIZES = [
+      { label: "5 Coins", weight: 50 },
+      { label: "10 Coins", weight: 20 },
+      { label: "Battle Call", weight: 20 },
+      { label: "25 Coins", weight: 8 },
+      { label: "Cases", weight: 2 },
+    ];
+    function pickWeightedPrize(){
+      const total = PRIZES.reduce((s,p) => s + p.weight, 0);
+      let r = randomFloat() * total;
+      for(const p of PRIZES){
+        if(r < p.weight) return p;
+        r -= p.weight;
+      }
+      return PRIZES[PRIZES.length - 1];
+    }
+
+    function spinReel(trackEl, fillerItems, finalLabel, itemHeight, duration){
+      const items = [];
+      for(let i=0;i<14;i++) items.push(fillerItems[randomIndex(fillerItems.length)]);
+      items.push(finalLabel);
+      trackEl.innerHTML = items.map(t => `<div class="reel-item">${t}</div>`).join("");
+      trackEl.style.transition = "none";
+      trackEl.style.transform = "translateY(0px)";
+      void trackEl.offsetHeight;
+      requestAnimationFrame(() => {
+        trackEl.style.transition = `transform ${duration}ms cubic-bezier(.14,.66,.2,1)`;
+        trackEl.style.transform = `translateY(-${itemHeight * (items.length - 1)}px)`;
+      });
+    }
+
+    function rollWinner(){
+      if(currentEntries.length === 0) return;
+      document.getElementById("rollWinnerBtn").disabled = true;
+      document.getElementById("resultBox").style.display = "none";
+      const winner = currentEntries[randomIndex(currentEntries.length)];
+      currentWinner = winner;
+      spinReel(document.getElementById("winnerTrack"), currentEntries, winner, 64, 1400);
+      setTimeout(() => {
+        document.getElementById("rollWinnerBtn").disabled = false;
+        document.getElementById("rollPrizeBtn").disabled = false;
+      }, 1550);
+    }
+
+    function rollPrize(){
+      document.getElementById("rollPrizeBtn").disabled = true;
+      const prize = pickWeightedPrize();
+      spinReel(document.getElementById("prizeTrack"), PRIZES.map(p => p.label), prize.label, 64, 1400);
+      setTimeout(() => {
+        document.getElementById("rollPrizeBtn").disabled = false;
+        const resultBox = document.getElementById("resultBox");
+        const battleLink = document.getElementById("battleCallLink");
+        document.getElementById("resultText").textContent = `${currentWinner || "?"} — ${prize.label}`;
+        battleLink.style.display = prize.label === "Battle Call" ? "inline-block" : "none";
+        resultBox.style.display = "block";
+      }, 1550);
+    }
+  }
+</script>
+</body>
+</html>

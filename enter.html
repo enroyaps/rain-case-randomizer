@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enter the Draw</title>
+<style>
+  :root{
+    --bg:#060309; --panel:#140b22; --panel2:#0d0716; --border:#2d1c46;
+    --gold:#9b5cff; --goldLight:#cba3ff; --cyan:#34e0ff; --text:#f1ecfb; --muted:#a99bd1;
+    --err:#f4433f; --ok:#4ade80;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:radial-gradient(circle at top,#2a1345,var(--bg) 60%);
+    color:var(--text); min-height:100vh; padding:24px; display:flex; align-items:center; justify-content:center;
+  }
+  .card{
+    background:var(--panel);border:1px solid var(--border);border-radius:16px;
+    padding:32px; max-width:440px; width:100%; text-align:center;
+  }
+  h1{font-size:1.3rem;margin:0 0 8px;color:var(--cyan);}
+  p.sub{color:var(--muted);font-size:0.88rem;margin:0 0 24px;line-height:1.5;}
+  .id-row{
+    display:flex;align-items:stretch;border:1px solid var(--border);border-radius:10px;
+    overflow:hidden;background:var(--panel2);margin-bottom:16px;
+  }
+  .id-prefix{
+    background:#1c1030;color:var(--goldLight);font-weight:700;
+    padding:14px 12px;display:flex;align-items:center;letter-spacing:.03em;
+  }
+  #suffix{
+    flex:1;background:transparent;border:none;color:var(--text);font-size:1rem;
+    padding:14px 12px;outline:none;letter-spacing:.03em;text-transform:uppercase;
+  }
+  button{
+    width:100%;background:linear-gradient(180deg,var(--goldLight),var(--gold));color:#fbf7ff;
+    border:none;font-weight:800;font-size:1rem;padding:14px;border-radius:10px;cursor:pointer;
+    letter-spacing:.04em;
+  }
+  button:hover:not(:disabled){filter:brightness(1.08);}
+  button:disabled{opacity:0.5;cursor:default;}
+  .status{margin-top:16px;font-size:0.9rem;min-height:1.2em;line-height:1.5;}
+  .status.ok{color:var(--ok);}
+  .status.err{color:var(--err);}
+  .status.muted{color:var(--muted);}
+  .setup-warning{
+    background:#2c1a12;border:1px solid #6b4a1a;color:#f4c778;padding:14px;border-radius:10px;
+    font-size:0.82rem;text-align:left;line-height:1.5;
+  }
+</style>
+</head>
+<body>
+  <div class="card" id="app">
+    <h1>Enter the Draw</h1>
+    <p class="sub">Paste your Rain ID to enter. Only IDs on this week's list are accepted, one entry per ID.</p>
+
+    <div id="setupWarning" class="setup-warning" style="display:none;">
+      Firebase isn't configured yet on this page — the site owner needs to fill in
+      <code>firebase-config.js</code> before entries can be submitted.
+    </div>
+
+    <div id="formArea">
+      <div class="id-row">
+        <div class="id-prefix">RN-</div>
+        <input id="suffix" type="text" placeholder="7JEU96GX" maxlength="24" autocomplete="off" spellcheck="false">
+      </div>
+      <button id="submitBtn">SUBMIT</button>
+      <div id="status" class="status"></div>
+    </div>
+  </div>
+
+<script type="module">
+  import { firebaseConfig, CONFIG_IS_SET } from "./firebase-config.js";
+
+  const statusEl = document.getElementById("status");
+  const suffixEl = document.getElementById("suffix");
+  const submitBtn = document.getElementById("submitBtn");
+
+  if(!CONFIG_IS_SET){
+    document.getElementById("setupWarning").style.display = "block";
+    document.getElementById("formArea").style.display = "none";
+  } else {
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js");
+    const { getFirestore, doc, setDoc, serverTimestamp } =
+      await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js");
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    function setStatus(msg, kind){
+      statusEl.textContent = msg;
+      statusEl.className = "status" + (kind ? " " + kind : "");
+    }
+
+    submitBtn.addEventListener("click", async () => {
+      const raw = suffixEl.value.trim().toUpperCase().replace(/^RN-?/, "");
+      if(!raw || !/^[A-Z0-9]+$/.test(raw)){
+        setStatus("Enter a valid ID (letters/numbers only, no need to type RN-).", "err");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      setStatus("Checking...", "muted");
+
+      try{
+        await setDoc(doc(db, "entries", raw), {
+          rainId: "RN-" + raw,
+          submittedAt: serverTimestamp()
+        });
+        setStatus("You're entered! Good luck 🍀", "ok");
+        suffixEl.disabled = true;
+      } catch(err){
+        setStatus("Couldn't enter — this ID may not be on this week's list, or it already entered. Ping the host if you think that's wrong.", "err");
+        submitBtn.disabled = false;
+      }
+    });
+
+    suffixEl.addEventListener("keydown", (e) => {
+      if(e.key === "Enter") submitBtn.click();
+    });
+  }
+</script>
+</body>
+</html>

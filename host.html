@@ -40,6 +40,9 @@
   .status.ok{color:var(--ok);} .status.err{color:var(--err);} .status.muted{color:var(--muted);}
   .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:20px;}
   .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;color:var(--muted);font-size:0.85rem;}
+  .admin-nav{margin:-6px 0 20px;font-size:0.85rem;}
+  .admin-nav a{color:var(--cyan);font-weight:700;text-decoration:none;}
+  .admin-nav a:hover{text-decoration:underline;}
   .blur-toggle{filter:blur(6px);transition:filter .15s ease;cursor:pointer;}
   .blur-toggle:hover{filter:blur(0);}
   .signout-dock{display:flex;justify-content:center;margin-top:32px;padding-top:16px;border-top:1px solid var(--border);}
@@ -116,6 +119,10 @@
       <button class="secondary" id="toggleWhitelistBtn">Show Whitelist Editor</button>
     </div>
 
+    <div class="admin-nav">
+      <a href="index.html">Open Case Picker →</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="enter.html">Open Entry Page →</a>
+    </div>
+
     <div class="panel" id="whitelistPanel" style="display:none;">
       <h2>Weekly Whitelist</h2>
       <textarea id="whitelistBox" placeholder="One Rain ID per line or comma-separated, e.g. 7JEU96GX"></textarea>
@@ -124,10 +131,8 @@
 
       <h2 style="margin-top:22px;">Battle Call Status (<span id="doneCount">0</span>/<span id="totalCount">0</span> done)</h2>
       <div id="whitelistStatusList" class="wl-status-list"></div>
-    </div>
 
-    <div class="panel">
-      <h2>Round Controls</h2>
+      <h2 style="margin-top:22px;">Round Controls</h2>
       <button class="secondary" id="resetRoundBtn">Reset Round (clears queue)</button>
       <div id="resetStatus" class="status"></div>
     </div>

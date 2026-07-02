@@ -53,9 +53,10 @@
   .wl-chip.done{border-color:var(--ok);color:var(--ok);}
   .wl-chip.pending{border-color:var(--err);color:var(--err);}
   .reel{
-    width:100%;height:64px;overflow:hidden;border:2px solid var(--border);border-radius:10px;
-    background:var(--panel2);position:relative;margin-bottom:14px;
+    width:280px;max-width:100%;height:64px;overflow:hidden;border:2px solid var(--border);border-radius:10px;
+    background:var(--panel2);position:relative;margin:0 auto 14px;
   }
+  #rollWinnerBtn, #rollPrizeBtn{display:block;margin:0 auto;}
   .reel::after{
     content:"";position:absolute;inset:0;
     box-shadow:inset 0 12px 12px -10px #000, inset 0 -12px 12px -10px #000;
@@ -63,6 +64,19 @@
   }
   .reel-track{display:flex;flex-direction:column;}
   .reel-item{height:64px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;}
+  .reel-item.avatar-item{flex-direction:column;gap:2px;}
+  .avatar-circle{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0;}
+  .avatar-id{font-size:0.68rem;font-weight:700;color:var(--goldLight);}
+  .reel-item.prize-item{gap:8px;}
+  @keyframes reelLandPulse{
+    0%{box-shadow:0 0 0 0 rgba(155,92,255,.65);}
+    70%{box-shadow:0 0 0 16px rgba(155,92,255,0);}
+    100%{box-shadow:0 0 0 0 rgba(155,92,255,0);}
+  }
+  @keyframes reelLandBounce{
+    0%{transform:scale(1);} 45%{transform:scale(1.045);} 100%{transform:scale(1);}
+  }
+  .reel.landed{animation:reelLandPulse .65s ease-out, reelLandBounce .4s ease-out;}
   .result-box{
     margin-top:18px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;
     padding:16px;text-align:center;
@@ -121,10 +135,10 @@
     <div class="panel">
       <h2>Draw</h2>
       <div class="reel" id="winnerReel"><div class="reel-track" id="winnerTrack"></div></div>
-      <button id="rollWinnerBtn">🎰 Roll Winner</button>
+      <button id="rollWinnerBtn">Roll Winner</button>
 
       <div class="reel" id="prizeReel" style="margin-top:20px;"><div class="reel-track" id="prizeTrack"></div></div>
-      <button id="rollPrizeBtn" disabled>🎰 Roll Prize</button>
+      <button id="rollPrizeBtn" disabled>Roll Prize</button>
 
       <div id="resultBox" class="result-box" style="display:none;">
         <div class="label">Result</div>
@@ -249,9 +263,12 @@
       });
 
       // Track submitted entries in the background (no visible feed) so Roll Winner has a pool to draw from.
+      // A doc only counts as "done" if it actually has cases — mid-edit (Change Battle) docs
+      // are cleared to cases:[] so they correctly show as pending here and aren't rollable yet.
       onSnapshot(collection(db, "entries"), (snapshot) => {
-        currentEntries = snapshot.docs.map(d => d.data().rainId);
-        submittedSuffixes = new Set(snapshot.docs.map(d => d.id));
+        const completedDocs = snapshot.docs.filter(d => Array.isArray(d.data().cases) && d.data().cases.length > 0);
+        currentEntries = completedDocs.map(d => d.data().rainId);
+        submittedSuffixes = new Set(completedDocs.map(d => d.id));
         document.getElementById("rollWinnerBtn").disabled = currentEntries.length === 0;
         renderWhitelistStatus();
       });
@@ -301,11 +318,27 @@
       return PRIZES[PRIZES.length - 1];
     }
 
-    function spinReel(trackEl, fillerItems, finalLabel, itemHeight, duration){
+    const AVATAR_EMOJIS = ["🐸","🦄","🐙","🎃","👻","🦊","🐵","🐺","🦁","🐯","🐨","🐼","🦝","🐲","🥷","🤡","👾","🧌","🦖","🐷","🐔","🐶","🐱","🦉","🐹","🐰"];
+
+    // Deterministic per-person avatar: same Rain ID always gets the same emoji + color,
+    // but nobody picks it themselves.
+    function avatarFor(rainId){
+      const suffix = rainId.replace(/^RN-/, "");
+      let hash = 0;
+      for(let i = 0; i < suffix.length; i++) hash = (hash * 31 + suffix.charCodeAt(i)) >>> 0;
+      return { emoji: AVATAR_EMOJIS[hash % AVATAR_EMOJIS.length], hue: hash % 360 };
+    }
+
+    function coinSvg(uid){
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 16 16" style="display:block;flex-shrink:0;"><path fill="url(#coinA${uid})" d="M15.907 7.433c-.587-3.567-3.904-6.3-7.907-6.3S.68 3.867.093 7.434H0v1.134C0 12.672 3.582 16 8 16s8-3.328 8-7.433V7.433z"></path><path fill="url(#coinB${uid})" d="M8 14.866c4.418 0 8-3.328 8-7.433S12.418 0 8 0 0 3.328 0 7.433s3.582 7.433 8 7.433"></path><path fill="url(#coinC${uid})" d="M8 13.372c3.53 0 6.392-2.66 6.392-5.939 0-3.28-2.862-5.939-6.392-5.939-3.53 0-6.392 2.66-6.392 5.94 0 3.279 2.862 5.938 6.392 5.938"></path><path fill="url(#coinD${uid})" d="M8 2.116c3.418 0 6.21 2.492 6.383 5.628.006-.103.009-.207.009-.31 0-3.28-2.862-5.94-6.392-5.94-3.53 0-6.392 2.66-6.392 5.94 0 .103.003.207.01.31C1.79 4.608 4.581 2.116 8 2.116"></path><path fill="url(#coinE${uid})" d="M4.754 7.943c-.213-.029-.417-.222-.374-.44l.047-.203a.505.505 0 0 1 .053-.151c.061-.1.156-.147.293-.16l1.085-.161c1.87-.138 1.672-1.044 1.946-1.744l.432-1.294c.038-.175.146-.274.336-.274H8.9c.19 0 .289.1.251.274l-.076 1.318c-.095 1.04.01 1.507 1.085 1.653l1.18.236s.331.053.284.345l-.07.33a.29.29 0 0 1-.29.241l-1.155.147c-1.09.099-1.384-.015-1.743 1.313L7.9 11.03c-.024.174-.147.274-.337.274h-.46c-.189 0-.279-.1-.25-.274l.133-1.616c.057-1.034-.313-1.185-1.217-1.308l-1.019-.17.005.005h-.002Z"></path><defs><linearGradient id="coinA${uid}" x1="3.56" x2="16.483" y1="-1.567" y2="29.355" gradientUnits="userSpaceOnUse"><stop stop-color="#F7B016"></stop><stop offset="1" stop-color="#310000"></stop></linearGradient><linearGradient id="coinB${uid}" x1="3.321" x2="25.312" y1="2.84" y2="24.549" gradientUnits="userSpaceOnUse"><stop offset="0.655" stop-color="#F7B016"></stop><stop offset="1" stop-color="#310000"></stop></linearGradient><linearGradient id="coinC${uid}" x1="14.393" x2="-17.887" y1="-33.321" y2="60.905" gradientUnits="userSpaceOnUse"><stop offset="0.418" stop-color="#F7B016"></stop><stop offset="1" stop-color="#310000"></stop></linearGradient><linearGradient id="coinD${uid}" x1="3.887" x2="16.441" y1="21.299" y2="-5.934" gradientUnits="userSpaceOnUse"><stop stop-color="#F7B016"></stop><stop offset="0.905" stop-color="#310000"></stop><stop offset="1" stop-color="#4D1903"></stop></linearGradient><linearGradient id="coinE${uid}" x1="0.37" x2="13.38" y1="26.283" y2="-9.138" gradientUnits="userSpaceOnUse"><stop stop-color="#F7B016"></stop><stop offset="1" stop-color="#310000"></stop><stop offset="1" stop-color="#6B3406"></stop></linearGradient></defs></svg>`;
+    }
+
+    function spinReel(trackEl, fillerItems, finalLabel, itemHeight, duration, renderItem){
       const items = [];
       for(let i=0;i<14;i++) items.push(fillerItems[randomIndex(fillerItems.length)]);
       items.push(finalLabel);
-      trackEl.innerHTML = items.map(t => `<div class="reel-item">${t}</div>`).join("");
+      const render = renderItem || (t => `<div class="reel-item">${t}</div>`);
+      trackEl.innerHTML = items.map((t, idx) => render(t, idx === items.length - 1, idx)).join("");
       trackEl.style.transition = "none";
       trackEl.style.transform = "translateY(0px)";
       void trackEl.offsetHeight;
@@ -315,23 +348,42 @@
       });
     }
 
+    function flashLanded(reelEl){
+      reelEl.classList.remove("landed");
+      void reelEl.offsetWidth;
+      reelEl.classList.add("landed");
+    }
+
     function rollWinner(){
       if(currentEntries.length === 0) return;
       document.getElementById("rollWinnerBtn").disabled = true;
       document.getElementById("resultBox").style.display = "none";
       const winner = currentEntries[randomIndex(currentEntries.length)];
       currentWinner = winner;
-      spinReel(document.getElementById("winnerTrack"), currentEntries, winner, 64, 1400);
+      spinReel(document.getElementById("winnerTrack"), currentEntries, winner, 64, 1400, (rainId, isFinal) => {
+        const av = avatarFor(rainId);
+        return `<div class="reel-item avatar-item">
+          <div class="avatar-circle" style="background:hsl(${av.hue},55%,42%);">${av.emoji}</div>
+          ${isFinal ? `<div class="avatar-id">${rainId}</div>` : ""}
+        </div>`;
+      });
       setTimeout(() => {
         document.getElementById("rollWinnerBtn").disabled = false;
         document.getElementById("rollPrizeBtn").disabled = false;
+        flashLanded(document.getElementById("winnerReel"));
       }, 1550);
     }
 
     function rollPrize(){
       document.getElementById("rollPrizeBtn").disabled = true;
       const prize = pickWeightedPrize();
-      spinReel(document.getElementById("prizeTrack"), PRIZES.map(p => p.label), prize.label, 64, 1400);
+      spinReel(document.getElementById("prizeTrack"), PRIZES.map(p => p.label), prize.label, 64, 1400, (label, isFinal, idx) => {
+        const isCoins = /Coins/.test(label);
+        return `<div class="reel-item prize-item">
+          ${isCoins ? coinSvg("p" + idx) : ""}
+          <span>${label}</span>
+        </div>`;
+      });
 
       const casesArea = document.getElementById("battleCasesArea");
       const casesGrid = document.getElementById("battleCasesGrid");
@@ -344,6 +396,7 @@
 
       setTimeout(async () => {
         document.getElementById("rollPrizeBtn").disabled = false;
+        flashLanded(document.getElementById("prizeReel"));
         const resultBox = document.getElementById("resultBox");
         document.getElementById("resultText").textContent = `${currentWinner || "?"} — ${prize.label}`;
         resultBox.style.display = "block";

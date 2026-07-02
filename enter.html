@@ -300,6 +300,7 @@
 
     function openBuilder(prefill){
       document.getElementById("builderRainId").textContent = "RN-" + currentRainSuffix;
+      document.getElementById("app").style.display = "none";
       document.getElementById("previousBattleWrap").style.display = "none";
       document.getElementById("builderWrap").style.display = "block";
       renderGrid();
@@ -364,24 +365,24 @@
       continueBtn.disabled = true;
       setStatus("Checking...", "muted");
 
-      let previousData = null;
+      // The security rules only allow this read at all if `raw` is on the whitelist —
+      // so a denied read here means "not whitelisted," not just "no previous battle."
       try{
         const snap = await getDoc(doc(db, "entries", raw));
+        continueBtn.disabled = false;
+        setStatus("", "");
         if(snap.exists() && Array.isArray(snap.data().cases) && snap.data().cases.length){
-          previousData = snap.data();
+          showPreviousBattle(snap.data());
+        } else {
+          openBuilder(null);
         }
       } catch(err){
-        // Not whitelisted (or offline) — fall through to the builder as normal;
-        // the real gate is the final submit, same as a first-time entrant.
-      }
-
-      continueBtn.disabled = false;
-      setStatus("", "");
-
-      if(previousData){
-        showPreviousBattle(previousData);
-      } else {
-        openBuilder(null);
+        continueBtn.disabled = false;
+        if(err.code === "permission-denied"){
+          setStatus("This ID isn't on this week's list. Ping the host if you think that's wrong.", "err");
+        } else {
+          setStatus("Couldn't check right now — try again.", "err");
+        }
       }
     });
 

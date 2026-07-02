@@ -179,10 +179,14 @@
           <div class="budget-target-marker" style="left:96.15%;"></div>
         </div>
         <div class="budget-text">
-          <span>Total: <b id="totalText">0.00</b> / 78.00 coins</span>
+          <span>You'll pay: <b id="totalText">0.00</b> / 78.00 coins</span>
           <span>Aim for 75&ndash;78 &mdash; you can go lower, just not higher</span>
         </div>
+        <div class="raw-total-row" id="rawTotalRow" style="display:none;font-size:0.78rem;color:var(--muted);margin-top:4px;">
+          Case total before borrow: <b id="rawTotalText" style="color:var(--goldLight);">0.00</b> coins
+        </div>
         <div class="budget-warn" id="budgetWarn"></div>
+        <div class="budget-warn" id="overBudgetWarn" style="font-weight:700;"></div>
       </div>
 
       <input id="caseSearch" type="text" placeholder="Search cases by name...">
@@ -315,6 +319,22 @@
       return selected.reduce((s, name) => s + caseByName.get(name)[1], 0);
     }
 
+    // Borrow mode means you only pay a fraction of the case total upfront, so the
+    // real 78-coin budget constraint is on the PAY amount, not the raw case total.
+    function payAmountFor(total){
+      if(!borrowToggle.checked) return total;
+      const pct = parseInt(borrowPercent.value, 10);
+      return total * (1 - pct / 100);
+    }
+
+    // Highest raw case total that still keeps payAmountFor(total) <= BUDGET_MAX at the
+    // current borrow %. Without borrow mode this is just BUDGET_MAX itself.
+    function effectiveMaxTotal(){
+      if(!borrowToggle.checked) return BUDGET_MAX;
+      const pct = parseInt(borrowPercent.value, 10);
+      return BUDGET_MAX / (1 - pct / 100);
+    }
+
     let warnTimer = null;
     function flashBudgetWarn(msg){
       const el = document.getElementById("budgetWarn");
@@ -329,13 +349,27 @@
         selected.splice(idx, 1);
       } else {
         const price = caseByName.get(name)[1];
-        if(currentTotal() + price > BUDGET_MAX){
-          flashBudgetWarn(`Adding "${name}" would go over the 78 coin budget.`);
+        const hypotheticalTotal = currentTotal() + price;
+        if(payAmountFor(hypotheticalTotal) > BUDGET_MAX + 1e-9){
+          const note = borrowToggle.checked
+            ? ` (at ${borrowPercent.value}% borrow, your case total cap is ${effectiveMaxTotal().toFixed(2)})`
+            : "";
+          flashBudgetWarn(`Adding "${name}" would go over the 78 coin pay budget${note}.`);
           return;
         }
         selected.push(name);
       }
       refreshSelectionUI();
+    }
+
+    function checkOverBudgetState(){
+      const total = currentTotal();
+      const pay = payAmountFor(total);
+      const over = pay > BUDGET_MAX + 1e-9;
+      document.getElementById("submitBattleBtn").disabled = over;
+      document.getElementById("overBudgetWarn").textContent = over
+        ? "You're over the 78 coin pay budget at this borrow % — remove cases or raise the borrow percentage."
+        : "";
     }
 
     function refreshSelectionUI(){
@@ -354,9 +388,16 @@
 
       document.getElementById("selectedCount").textContent = selected.length;
       const total = currentTotal();
-      document.getElementById("totalText").textContent = total.toFixed(2);
-      document.getElementById("budgetFill").style.width = Math.min(100, (total / BUDGET_MAX) * 100) + "%";
+      const pay = payAmountFor(total);
+      document.getElementById("totalText").textContent = pay.toFixed(2);
+      document.getElementById("budgetFill").style.width = Math.min(100, (pay / BUDGET_MAX) * 100) + "%";
+
+      const rawRow = document.getElementById("rawTotalRow");
+      rawRow.style.display = borrowToggle.checked ? "block" : "none";
+      document.getElementById("rawTotalText").textContent = total.toFixed(2);
+
       updateBorrowCalc();
+      checkOverBudgetState();
     }
 
     document.getElementById("caseSearch").addEventListener("input", (e) => {
@@ -376,11 +417,11 @@
 
     borrowToggle.addEventListener("change", () => {
       borrowControls.style.display = borrowToggle.checked ? "block" : "none";
-      updateBorrowCalc();
+      refreshSelectionUI();
     });
     borrowPercent.addEventListener("input", () => {
       borrowPercentLabel.textContent = borrowPercent.value + "%";
-      updateBorrowCalc();
+      refreshSelectionUI();
     });
 
     function updateBorrowCalc(){
@@ -408,17 +449,23 @@
         setBattleStatus("Pick at least one case first.", "err");
         return;
       }
+      const total = currentTotal();
+      const payAmountCheck = payAmountFor(total);
+      if(payAmountCheck > BUDGET_MAX + 1e-9){
+        setBattleStatus("You're over the 78 coin pay budget — remove cases or raise the borrow percentage.", "err");
+        return;
+      }
+
       submitBattleBtn.disabled = true;
       setBattleStatus("Submitting...", "muted");
 
-      const total = currentTotal();
       const battleSize = document.querySelector('input[name="battleSize"]:checked').value;
       const baseMode = document.querySelector('input[name="baseMode"]:checked').value;
       const jackpot = jackpotToggle.checked;
       const terminal = terminalToggle.checked;
       const borrowOn = borrowToggle.checked;
       const borrowPct = borrowOn ? parseInt(borrowPercent.value, 10) : null;
-      const payAmount = borrowOn ? total * (1 - borrowPct / 100) : total;
+      const payAmount = payAmountCheck;
 
       try{
         await setDoc(doc(db, "entries", currentRainSuffix), {

@@ -53,7 +53,7 @@
   .wl-chip.done{border-color:var(--ok);color:var(--ok);}
   .wl-chip.pending{border-color:var(--err);color:var(--err);}
   .reel{
-    width:280px;max-width:100%;height:64px;overflow:hidden;border:2px solid var(--border);border-radius:10px;
+    width:280px;max-width:100%;height:92px;overflow:hidden;border:2px solid var(--border);border-radius:10px;
     background:var(--panel2);position:relative;margin:0 auto 14px;
   }
   #rollWinnerBtn, #rollPrizeBtn{display:block;margin:0 auto;}
@@ -63,10 +63,10 @@
     pointer-events:none;border-radius:8px;
   }
   .reel-track{display:flex;flex-direction:column;}
-  .reel-item{height:64px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;}
-  .reel-item.avatar-item{flex-direction:column;gap:2px;}
-  .avatar-circle{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0;}
-  .avatar-id{font-size:0.68rem;font-weight:700;color:var(--goldLight);}
+  .reel-item{height:92px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;}
+  .reel-item.avatar-item{flex-direction:column;gap:4px;}
+  .avatar-circle{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;}
+  .avatar-id{font-size:0.82rem;font-weight:700;color:var(--goldLight);}
   .reel-item.prize-item{gap:8px;}
   @keyframes reelLandPulse{
     0%{box-shadow:0 0 0 0 rgba(155,92,255,.65);}
@@ -362,7 +362,7 @@
       document.getElementById("resultBox").style.display = "none";
       const winner = currentEntries[randomIndex(currentEntries.length)];
       currentWinner = winner;
-      spinReel(document.getElementById("winnerTrack"), currentEntries, winner, 64, 1400, (rainId, isFinal) => {
+      spinReel(document.getElementById("winnerTrack"), currentEntries, winner, 92, 1400, (rainId, isFinal) => {
         const av = avatarFor(rainId);
         return `<div class="reel-item avatar-item">
           <div class="avatar-circle" style="background:hsl(${av.hue},55%,42%);">${av.emoji}</div>
@@ -379,7 +379,7 @@
     function rollPrize(){
       document.getElementById("rollPrizeBtn").disabled = true;
       const prize = pickWeightedPrize();
-      spinReel(document.getElementById("prizeTrack"), PRIZES.map(p => p.label), prize.label, 64, 1400, (label, isFinal, idx) => {
+      spinReel(document.getElementById("prizeTrack"), PRIZES.map(p => p.label), prize.label, 92, 1400, (label, isFinal, idx) => {
         const isCoins = /Coins/.test(label);
         const isBattle = label === "Battle Call";
         return `<div class="reel-item prize-item">

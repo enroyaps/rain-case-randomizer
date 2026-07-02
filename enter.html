@@ -168,7 +168,7 @@
     <div id="formArea">
       <div class="id-row">
         <div class="id-prefix">RN-</div>
-        <input id="suffix" type="text" placeholder="7JEU96GX" maxlength="24" autocomplete="off" spellcheck="false">
+        <input id="suffix" type="text" placeholder="Your ID" maxlength="24" autocomplete="off" spellcheck="false">
       </div>
       <button id="continueBtn">CONTINUE</button>
       <div id="status" class="status"></div>
@@ -248,6 +248,19 @@
 
       <button id="submitBattleBtn">SUBMIT BATTLE</button>
       <div id="battleStatus" class="status"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="passwordOverlay">
+    <div class="modal-card">
+      <h2 id="passwordModalTitle">Create a Password</h2>
+      <p class="sub" id="passwordModalSub" style="margin:0 0 14px;font-size:0.82rem;">
+        This protects your entry from trolls on stream. Keep it simple, anything works.
+      </p>
+      <input id="passwordInput" type="password" placeholder="Password" autocomplete="off">
+      <input id="passwordConfirmInput" type="password" placeholder="Confirm password" autocomplete="off">
+      <button id="passwordSubmitBtn" style="width:100%;">CONTINUE</button>
+      <div id="passwordStatus" class="status"></div>
     </div>
   </div>
 
@@ -355,6 +368,92 @@
       };
     }
 
+    async function hashPassword(pw){
+      const enc = new TextEncoder().encode(pw);
+      const buf = await crypto.subtle.digest("SHA-256", enc);
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    function proceedAfterAuth(data){
+      if(data && Array.isArray(data.cases) && data.cases.length){
+        showPreviousBattle(data);
+      } else {
+        openBuilder(null);
+      }
+    }
+
+    const passwordOverlay = document.getElementById("passwordOverlay");
+    const passwordModalTitle = document.getElementById("passwordModalTitle");
+    const passwordModalSub = document.getElementById("passwordModalSub");
+    const passwordInput = document.getElementById("passwordInput");
+    const passwordConfirmInput = document.getElementById("passwordConfirmInput");
+    const passwordSubmitBtn = document.getElementById("passwordSubmitBtn");
+    const passwordStatusEl = document.getElementById("passwordStatus");
+
+    function setPasswordStatus(msg, kind){
+      passwordStatusEl.textContent = msg;
+      passwordStatusEl.className = "status" + (kind ? " " + kind : "");
+    }
+
+    function showPasswordModal(mode, data){
+      passwordInput.value = "";
+      passwordConfirmInput.value = "";
+      setPasswordStatus("", "");
+      passwordSubmitBtn.disabled = false;
+
+      if(mode === "set"){
+        passwordModalTitle.textContent = "Create a Password";
+        passwordModalSub.textContent = "This protects your entry from trolls on stream. Keep it simple, anything works.";
+        passwordConfirmInput.style.display = "block";
+      } else {
+        passwordModalTitle.textContent = "Enter Your Password";
+        passwordModalSub.textContent = "You've already set a password for this ID. Forgot it? Contact the admin to have it reset.";
+        passwordConfirmInput.style.display = "none";
+      }
+      passwordOverlay.classList.add("open");
+      passwordInput.focus();
+
+      passwordSubmitBtn.onclick = async () => {
+        const pw = passwordInput.value;
+        if(!pw){
+          setPasswordStatus("Enter a password.", "err");
+          return;
+        }
+
+        if(mode === "set"){
+          if(pw !== passwordConfirmInput.value){
+            setPasswordStatus("Passwords don't match.", "err");
+            return;
+          }
+          passwordSubmitBtn.disabled = true;
+          setPasswordStatus("Saving...", "muted");
+          try{
+            const passwordHash = await hashPassword(pw);
+            await setDoc(doc(db, "entries", currentRainSuffix), {
+              rainId: "RN-" + currentRainSuffix,
+              passwordHash
+            }, { merge: true });
+            passwordOverlay.classList.remove("open");
+            proceedAfterAuth(data);
+          } catch(err){
+            setPasswordStatus("Couldn't save your password — try again.", "err");
+            passwordSubmitBtn.disabled = false;
+          }
+        } else {
+          const hash = await hashPassword(pw);
+          if(hash === data.passwordHash){
+            passwordOverlay.classList.remove("open");
+            proceedAfterAuth(data);
+          } else {
+            setPasswordStatus("Incorrect password. Forgot it? Contact the admin to have it reset.", "err");
+          }
+        }
+      };
+
+      passwordInput.onkeydown = (e) => { if(e.key === "Enter" && mode !== "set") passwordSubmitBtn.click(); };
+      passwordConfirmInput.onkeydown = (e) => { if(e.key === "Enter") passwordSubmitBtn.click(); };
+    }
+
     continueBtn.addEventListener("click", async () => {
       const raw = suffixEl.value.trim().toUpperCase().replace(/^RN-?/, "");
       if(!raw || !/^[A-Z0-9]+$/.test(raw)){
@@ -371,10 +470,11 @@
         const snap = await getDoc(doc(db, "entries", raw));
         continueBtn.disabled = false;
         setStatus("", "");
-        if(snap.exists() && Array.isArray(snap.data().cases) && snap.data().cases.length){
-          showPreviousBattle(snap.data());
+        const data = snap.exists() ? snap.data() : null;
+        if(data && data.passwordHash){
+          showPasswordModal("verify", data);
         } else {
-          openBuilder(null);
+          showPasswordModal("set", data);
         }
       } catch(err){
         continueBtn.disabled = false;
@@ -571,7 +671,7 @@
           borrowPercent: borrowPct,
           payAmount: Number(payAmount.toFixed(2)),
           submittedAt: serverTimestamp()
-        });
+        }, { merge: true });
         setBattleStatus("Battle submitted! Good luck 🍀", "ok");
         submitBattleBtn.textContent = "SUBMITTED";
       } catch(err){

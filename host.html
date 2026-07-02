@@ -132,8 +132,14 @@
       <h2 style="margin-top:22px;">Battle Call Status (<span id="doneCount">0</span>/<span id="totalCount">0</span> done)</h2>
       <div id="whitelistStatusList" class="wl-status-list"></div>
 
+      <h2 style="margin-top:22px;">Reset a User's Password</h2>
+      <input id="pwResetId" type="text" placeholder="Rain ID (e.g. 7JEU96GX)">
+      <input id="pwResetNew" type="text" placeholder="New password">
+      <button id="pwResetBtn">Set Password</button>
+      <div id="pwResetStatus" class="status"></div>
+
       <h2 style="margin-top:22px;">Round Controls</h2>
-      <button class="secondary" id="resetRoundBtn">Reset Round (clears queue)</button>
+      <button class="secondary" id="resetRoundBtn">Reset Round (clears queue &amp; passwords)</button>
       <div id="resetStatus" class="status"></div>
     </div>
 
@@ -293,6 +299,29 @@
 
       document.getElementById("rollWinnerBtn").addEventListener("click", rollWinner);
       document.getElementById("rollPrizeBtn").addEventListener("click", rollPrize);
+
+      document.getElementById("pwResetBtn").addEventListener("click", async () => {
+        const idRaw = document.getElementById("pwResetId").value.trim().toUpperCase().replace(/^RN-?/, "");
+        const newPw = document.getElementById("pwResetNew").value;
+        const statusEl = document.getElementById("pwResetStatus");
+        if(!idRaw || !newPw){
+          statusEl.textContent = "Enter both an ID and a new password.";
+          statusEl.className = "status err";
+          return;
+        }
+        statusEl.textContent = "Saving...";
+        statusEl.className = "status muted";
+        try{
+          const passwordHash = await hashPassword(newPw);
+          await setDoc(doc(db, "entries", idRaw), { rainId: "RN-" + idRaw, passwordHash }, { merge: true });
+          statusEl.textContent = `Password reset for RN-${idRaw}.`;
+          statusEl.className = "status ok";
+          document.getElementById("pwResetNew").value = "";
+        } catch(err){
+          statusEl.textContent = "Failed — check that ID is spelled correctly and on the whitelist.";
+          statusEl.className = "status err";
+        }
+      });
     }
 
     // --- secure randomness helpers ---
@@ -321,6 +350,12 @@
         r -= p.weight;
       }
       return PRIZES[PRIZES.length - 1];
+    }
+
+    async function hashPassword(pw){
+      const enc = new TextEncoder().encode(pw);
+      const buf = await crypto.subtle.digest("SHA-256", enc);
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
     }
 
     const AVATAR_EMOJIS = ["🐸","🦄","🐙","🎃","👻","🦊","🐵","🐺","🦁","🐯","🐨","🐼","🦝","🐲","🥷","🤡","👾","🧌","🦖","🐷","🐔","🐶","🐱","🦉","🐹","🐰"];

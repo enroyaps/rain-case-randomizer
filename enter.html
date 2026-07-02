@@ -120,6 +120,13 @@
   .case-cell .cname{font-size:0.64rem;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .case-cell .cprice{font-size:0.64rem;color:var(--goldLight);}
 
+  .battle-cases-grid{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:22px;}
+  .battle-case-card{
+    width:110px;height:128px;border:2px solid var(--border);border-radius:10px;overflow:hidden;
+    background:var(--panel2);
+  }
+  .battle-case-card img{width:100%;height:100%;object-fit:contain;display:block;}
+
   .selected-panel{margin-bottom:20px;}
   .selected-panel h3, .mode-panel h3{font-size:0.95rem;color:var(--cyan);margin:0 0 10px;}
   .selected-list{display:flex;flex-wrap:wrap;gap:8px;min-height:32px;}
@@ -165,6 +172,17 @@
       </div>
       <button id="continueBtn">CONTINUE</button>
       <div id="status" class="status"></div>
+    </div>
+  </div>
+
+  <div class="builder-wrap" id="previousBattleWrap" style="display:none;">
+    <div class="builder" style="text-align:center;">
+      <h1 style="text-align:center;">Your Current Battle</h1>
+      <p class="sub" style="text-align:center;">Entering as <b id="prevRainId"></b>. Here's what you've already submitted &mdash; you can leave it as is, or change it.</p>
+      <div id="prevCasesNames" style="font-weight:700;margin-bottom:6px;"></div>
+      <div id="prevMeta" style="color:var(--muted);font-size:0.85rem;margin-bottom:18px;"></div>
+      <div id="prevCasesGrid" class="battle-cases-grid"></div>
+      <button id="changeBattleBtn">CHANGE BATTLE</button>
     </div>
   </div>
 
@@ -259,7 +277,7 @@
     document.getElementById("formArea").style.display = "none";
   } else {
     const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js");
-    const { getFirestore, doc, setDoc, serverTimestamp } =
+    const { getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp } =
       await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js");
 
     const app = initializeApp(firebaseConfig);
@@ -280,17 +298,91 @@
     let selected = [];
     const caseByName = new Map(CASES.map(c => [c[0], c]));
 
-    continueBtn.addEventListener("click", () => {
+    function openBuilder(prefill){
+      document.getElementById("builderRainId").textContent = "RN-" + currentRainSuffix;
+      document.getElementById("previousBattleWrap").style.display = "none";
+      document.getElementById("builderWrap").style.display = "block";
+      renderGrid();
+
+      if(prefill){
+        selected = prefill.cases.slice();
+        const sizeInput = document.querySelector(`input[name="battleSize"][value="${prefill.battleSize}"]`);
+        const modeInput = document.querySelector(`input[name="baseMode"][value="${prefill.baseMode}"]`);
+        if(sizeInput) sizeInput.checked = true;
+        if(modeInput) modeInput.checked = true;
+        jackpotToggle.checked = !!prefill.jackpot;
+        terminalToggle.checked = !!prefill.terminal;
+        if(prefill.borrowPercent){
+          borrowToggle.checked = true;
+          borrowControls.style.display = "block";
+          borrowPercent.value = prefill.borrowPercent;
+          borrowPercentLabel.textContent = prefill.borrowPercent + "%";
+        }
+      }
+      refreshSelectionUI();
+    }
+
+    function showPreviousBattle(data){
+      document.getElementById("prevRainId").textContent = "RN-" + currentRainSuffix;
+      document.getElementById("prevCasesNames").textContent = data.cases.join(", ");
+      const extras = [
+        data.jackpot ? "Jackpot" : null,
+        data.terminal ? "Terminal" : null,
+        data.borrowPercent ? `Borrow ${data.borrowPercent}% (paid ${data.payAmount})` : null
+      ].filter(Boolean).join(" + ");
+      document.getElementById("prevMeta").textContent =
+        `${data.battleSize || ""} ${data.baseMode || ""}${extras ? " + " + extras : ""} — total ${data.total} coins`;
+      document.getElementById("prevCasesGrid").innerHTML = data.cases.map(name => {
+        const file = ICON_FILES[name];
+        return `<div class="battle-case-card">${file ? `<img src="icons/${encodeURIComponent(file)}" alt="">` : name}</div>`;
+      }).join("");
+      document.getElementById("app").style.display = "none";
+      document.getElementById("previousBattleWrap").style.display = "block";
+
+      document.getElementById("changeBattleBtn").onclick = async () => {
+        const btn = document.getElementById("changeBattleBtn");
+        btn.disabled = true;
+        try{
+          // Clear cases server-side so the host's status tracker flips back to "pending"
+          // the moment editing starts, not only once they resubmit.
+          await updateDoc(doc(db, "entries", currentRainSuffix), { cases: [] });
+        } catch(err){
+          // If this fails for any reason, still let them edit — final submit re-validates everything.
+        }
+        btn.disabled = false;
+        openBuilder(data);
+      };
+    }
+
+    continueBtn.addEventListener("click", async () => {
       const raw = suffixEl.value.trim().toUpperCase().replace(/^RN-?/, "");
       if(!raw || !/^[A-Z0-9]+$/.test(raw)){
         setStatus("Enter a valid ID (letters/numbers only, no need to type RN-).", "err");
         return;
       }
       currentRainSuffix = raw;
-      document.getElementById("builderRainId").textContent = "RN-" + raw;
-      document.getElementById("app").style.display = "none";
-      document.getElementById("builderWrap").style.display = "block";
-      renderGrid();
+      continueBtn.disabled = true;
+      setStatus("Checking...", "muted");
+
+      let previousData = null;
+      try{
+        const snap = await getDoc(doc(db, "entries", raw));
+        if(snap.exists() && Array.isArray(snap.data().cases) && snap.data().cases.length){
+          previousData = snap.data();
+        }
+      } catch(err){
+        // Not whitelisted (or offline) — fall through to the builder as normal;
+        // the real gate is the final submit, same as a first-time entrant.
+      }
+
+      continueBtn.disabled = false;
+      setStatus("", "");
+
+      if(previousData){
+        showPreviousBattle(previousData);
+      } else {
+        openBuilder(null);
+      }
     });
 
     suffixEl.addEventListener("keydown", (e) => {

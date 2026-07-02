@@ -333,6 +333,8 @@
       return `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 16 16" style="display:block;flex-shrink:0;"><path fill="url(#coinA${uid})" d="M15.907 7.433c-.587-3.567-3.904-6.3-7.907-6.3S.68 3.867.093 7.434H0v1.134C0 12.672 3.582 16 8 16s8-3.328 8-7.433V7.433z"></path><path fill="url(#coinB${uid})" d="M8 14.866c4.418 0 8-3.328 8-7.433S12.418 0 8 0 0 3.328 0 7.433s3.582 7.433 8 7.433"></path><path fill="url(#coinC${uid})" d="M8 13.372c3.53 0 6.392-2.66 6.392-5.939 0-3.28-2.862-5.939-6.392-5.939-3.53 0-6.392 2.66-6.392 5.94 0 3.279 2.862 5.938 6.392 5.938"></path><path fill="url(#coinD${uid})" d="M8 2.116c3.418 0 6.21 2.492 6.383 5.628.006-.103.009-.207.009-.31 0-3.28-2.862-5.94-6.392-5.94-3.53 0-6.392 2.66-6.392 5.94 0 .103.003.207.01.31C1.79 4.608 4.581 2.116 8 2.116"></path><path fill="url(#coinE${uid})" d="M4.754 7.943c-.213-.029-.417-.222-.374-.44l.047-.203a.505.505 0 0 1 .053-.151c.061-.1.156-.147.293-.16l1.085-.161c1.87-.138 1.672-1.044 1.946-1.744l.432-1.294c.038-.175.146-.274.336-.274H8.9c.19 0 .289.1.251.274l-.076 1.318c-.095 1.04.01 1.507 1.085 1.653l1.18.236s.331.053.284.345l-.07.33a.29.29 0 0 1-.29.241l-1.155.147c-1.09.099-1.384-.015-1.743 1.313L7.9 11.03c-.024.174-.147.274-.337.274h-.46c-.189 0-.279-.1-.25-.274l.133-1.616c.057-1.034-.313-1.185-1.217-1.308l-1.019-.17.005.005h-.002Z"></path><defs><linearGradient id="coinA${uid}" x1="3.56" x2="16.483" y1="-1.567" y2="29.355" gradientUnits="userSpaceOnUse"><stop stop-color="#F7B016"></stop><stop offset="1" stop-color="#310000"></stop></linearGradient><linearGradient id="coinB${uid}" x1="3.321" x2="25.312" y1="2.84" y2="24.549" gradientUnits="userSpaceOnUse"><stop offset="0.655" stop-color="#F7B016"></stop><stop offset="1" stop-color="#310000"></stop></linearGradient><linearGradient id="coinC${uid}" x1="14.393" x2="-17.887" y1="-33.321" y2="60.905" gradientUnits="userSpaceOnUse"><stop offset="0.418" stop-color="#F7B016"></stop><stop offset="1" stop-color="#310000"></stop></linearGradient><linearGradient id="coinD${uid}" x1="3.887" x2="16.441" y1="21.299" y2="-5.934" gradientUnits="userSpaceOnUse"><stop stop-color="#F7B016"></stop><stop offset="0.905" stop-color="#310000"></stop><stop offset="1" stop-color="#4D1903"></stop></linearGradient><linearGradient id="coinE${uid}" x1="0.37" x2="13.38" y1="26.283" y2="-9.138" gradientUnits="userSpaceOnUse"><stop stop-color="#F7B016"></stop><stop offset="1" stop-color="#310000"></stop><stop offset="1" stop-color="#6B3406"></stop></linearGradient></defs></svg>`;
     }
 
+    const BATTLE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16" style="display:block;flex-shrink:0;color:var(--goldLight);"><path d="M9.6 2.2h.8L11.6 1l2.8-.4-.4 2.8-1.2 1.2v.8l-1.566 1.634L12.8 8.6l-3.2 3.2-6.4-6.4v-.8L2 3.4 1.6.6l2.8.4 1.2 1.2h.8l1.634 1.634zm4.8 8-3.2 3.2 1.6 1.6 3.2-3.2zm-7.864 1.464-3.2-3.2L0 11.8 3.2 15z"></path></svg>`;
+
     function spinReel(trackEl, fillerItems, finalLabel, itemHeight, duration, renderItem){
       const items = [];
       for(let i=0;i<14;i++) items.push(fillerItems[randomIndex(fillerItems.length)]);
@@ -379,8 +381,10 @@
       const prize = pickWeightedPrize();
       spinReel(document.getElementById("prizeTrack"), PRIZES.map(p => p.label), prize.label, 64, 1400, (label, isFinal, idx) => {
         const isCoins = /Coins/.test(label);
+        const isBattle = label === "Battle Call";
         return `<div class="reel-item prize-item">
           ${isCoins ? coinSvg("p" + idx) : ""}
+          ${isBattle ? BATTLE_SVG : ""}
           <span>${label}</span>
         </div>`;
       });

@@ -49,6 +49,35 @@
     background:#2c1a12;border:1px solid #6b4a1a;color:#f4c778;padding:14px;border-radius:10px;
     font-size:0.82rem;text-align:left;line-height:1.5;
   }
+
+  .admin-trigger{
+    position:fixed;bottom:16px;right:16px;width:auto;
+    background:transparent;color:var(--muted);border:1px solid var(--border);
+    font-size:0.72rem;padding:6px 14px;border-radius:20px;opacity:0.45;font-weight:600;
+    letter-spacing:.03em;
+  }
+  .admin-trigger:hover{opacity:1;}
+
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;
+    opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:50;
+  }
+  .modal-overlay.open{opacity:1;pointer-events:auto;}
+  .modal-card{
+    background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:28px;
+    max-width:340px;width:90%;position:relative;text-align:left;
+    transform:scale(.92) translateY(10px);opacity:0;transition:transform .2s ease,opacity .2s ease;
+  }
+  .modal-overlay.open .modal-card{transform:scale(1) translateY(0);opacity:1;}
+  .modal-close{
+    position:absolute;top:8px;right:12px;background:transparent;width:auto;padding:4px 8px;
+    color:var(--muted);font-size:1.3rem;line-height:1;border:none;
+  }
+  .modal-card h2{margin:0 0 16px;font-size:1.05rem;color:var(--cyan);text-align:center;}
+  .modal-card input{
+    width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);
+    border-radius:8px;padding:10px 12px;font-size:0.9rem;margin-bottom:10px;
+  }
 </style>
 </head>
 <body>
@@ -68,6 +97,19 @@
       </div>
       <button id="submitBtn">SUBMIT</button>
       <div id="status" class="status"></div>
+    </div>
+  </div>
+
+  <button id="adminLoginBtn" class="admin-trigger">Admin</button>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-card">
+      <button class="modal-close" id="modalClose">&times;</button>
+      <h2>Admin Login</h2>
+      <input id="adminEmail" type="email" placeholder="Email" autocomplete="username">
+      <input id="adminPassword" type="password" placeholder="Password" autocomplete="current-password">
+      <button id="adminSubmitBtn" style="width:100%;">SIGN IN</button>
+      <div id="adminLoginStatus" class="status"></div>
     </div>
   </div>
 
@@ -119,6 +161,56 @@
 
     suffixEl.addEventListener("keydown", (e) => {
       if(e.key === "Enter") submitBtn.click();
+    });
+
+    // --- admin login modal ---
+    const adminLoginBtn = document.getElementById("adminLoginBtn");
+    const modalOverlay = document.getElementById("modalOverlay");
+    const modalClose = document.getElementById("modalClose");
+    const adminSubmitBtn = document.getElementById("adminSubmitBtn");
+    const adminEmailEl = document.getElementById("adminEmail");
+    const adminPasswordEl = document.getElementById("adminPassword");
+    const adminLoginStatus = document.getElementById("adminLoginStatus");
+
+    let authApi = null;
+    async function ensureAuth(){
+      if(!authApi){
+        const { getAuth, signInWithEmailAndPassword } =
+          await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js");
+        authApi = { auth: getAuth(app), signInWithEmailAndPassword };
+      }
+      return authApi;
+    }
+
+    function closeModal(){
+      modalOverlay.classList.remove("open");
+      adminLoginStatus.textContent = "";
+      adminLoginStatus.className = "status";
+    }
+
+    adminLoginBtn.addEventListener("click", () => modalOverlay.classList.add("open"));
+    modalClose.addEventListener("click", closeModal);
+    modalOverlay.addEventListener("click", (e) => { if(e.target === modalOverlay) closeModal(); });
+
+    adminSubmitBtn.addEventListener("click", async () => {
+      const email = adminEmailEl.value.trim();
+      const password = adminPasswordEl.value;
+      adminLoginStatus.textContent = "Signing in...";
+      adminLoginStatus.className = "status muted";
+      adminSubmitBtn.disabled = true;
+      try{
+        const { auth, signInWithEmailAndPassword } = await ensureAuth();
+        await signInWithEmailAndPassword(auth, email, password);
+        window.location.href = "index.html";
+      } catch(err){
+        adminLoginStatus.textContent = "Sign-in failed — check email/password.";
+        adminLoginStatus.className = "status err";
+        adminSubmitBtn.disabled = false;
+      }
+    });
+
+    adminPasswordEl.addEventListener("keydown", (e) => {
+      if(e.key === "Enter") adminSubmitBtn.click();
     });
   }
 </script>

@@ -20,6 +20,13 @@
     background:#190f2c;border:1px solid #4d2c82;color:#cbb2ef;
     padding:12px 16px;border-radius:10px;font-size:0.85rem;line-height:1.4;margin:14px 0 22px;
   }
+  .admin-panel{
+    display:none;align-items:center;gap:10px;
+    background:#0d2233;border:1px solid var(--cyan);color:var(--cyan);
+    padding:10px 16px;border-radius:10px;font-size:0.85rem;margin:-6px 0 22px;
+  }
+  .admin-panel a{color:var(--cyan);font-weight:700;text-decoration:none;}
+  .admin-panel a:hover{text-decoration:underline;}
   .panel{
     background:var(--panel);border:1px solid var(--border);border-radius:14px;
     padding:20px;margin-bottom:20px;
@@ -99,6 +106,10 @@
     Case openings and battle modes are provably-fair RNG; nothing here can forecast an individual result
     or improve your real odds. Prices and images are a manual snapshot and will drift from the live site.
     Only spend what you're OK losing.
+  </div>
+
+  <div class="admin-panel" id="adminPanel">
+    🔐 Signed in as admin — <a href="host.html">Open Draw Host →</a>
   </div>
 
   <div class="panel">
@@ -496,6 +507,19 @@ function spin(){
 }
 
 document.getElementById("spinBtn").addEventListener("click", spin);
+</script>
+
+<script type="module">
+  import { firebaseConfig, CONFIG_IS_SET } from "./firebase-config.js";
+  if(CONFIG_IS_SET){
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js");
+    const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js");
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    onAuthStateChanged(auth, (user) => {
+      document.getElementById("adminPanel").style.display = user ? "flex" : "none";
+    });
+  }
 </script>
 </body>
 </html>

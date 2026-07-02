@@ -45,6 +45,13 @@
   .signout-dock{display:flex;justify-content:center;margin-top:32px;padding-top:16px;border-top:1px solid var(--border);}
   .signout-dock button{opacity:0.6;font-size:0.8rem;padding:8px 16px;}
   .signout-dock button:hover{opacity:1;}
+  .wl-status-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .wl-chip{
+    display:flex;align-items:center;gap:6px;border:1px solid var(--border);
+    padding:6px 12px;border-radius:20px;font-size:0.82rem;background:var(--panel2);
+  }
+  .wl-chip.done{border-color:var(--ok);color:var(--ok);}
+  .wl-chip.pending{border-color:var(--err);color:var(--err);}
   .reel{
     width:100%;height:64px;overflow:hidden;border:2px solid var(--border);border-radius:10px;
     background:var(--panel2);position:relative;margin-bottom:14px;
@@ -94,6 +101,9 @@
       <textarea id="whitelistBox" placeholder="One Rain ID per line or comma-separated, e.g. 7JEU96GX"></textarea>
       <button id="saveWhitelistBtn">Save Whitelist</button>
       <div id="whitelistStatus" class="status"></div>
+
+      <h2 style="margin-top:22px;">Battle Call Status (<span id="doneCount">0</span>/<span id="totalCount">0</span> done)</h2>
+      <div id="whitelistStatusList" class="wl-status-list"></div>
     </div>
 
     <div class="panel">
@@ -174,6 +184,19 @@
     let dashboardInitialized = false;
     let currentEntries = [];
     let currentWinner = null;
+    let currentWhitelist = [];
+    let submittedSuffixes = new Set();
+
+    function renderWhitelistStatus(){
+      const done = currentWhitelist.filter(id => submittedSuffixes.has(id)).length;
+      document.getElementById("doneCount").textContent = done;
+      document.getElementById("totalCount").textContent = currentWhitelist.length;
+      const listEl = document.getElementById("whitelistStatusList");
+      listEl.innerHTML = currentWhitelist.map(id => {
+        const isDone = submittedSuffixes.has(id);
+        return `<div class="wl-chip ${isDone ? "done" : "pending"}">${isDone ? "&#10003;" : "&#10007;"} RN-${id}</div>`;
+      }).join("") || `<span style="color:var(--muted);font-size:0.85rem;">No whitelist loaded yet.</span>`;
+    }
 
     function initDashboard(){
       if(dashboardInitialized) return;
@@ -187,10 +210,12 @@
         toggleBtn.textContent = showing ? "Show Whitelist Editor" : "Hide Whitelist Editor";
       });
 
-      // Load current whitelist into the textarea
+      // Load current whitelist into the textarea + status tracker
       getDoc(doc(db, "whitelist", "current")).then(snap => {
         if(snap.exists()){
-          document.getElementById("whitelistBox").value = (snap.data().ids || []).join("\n");
+          currentWhitelist = snap.data().ids || [];
+          document.getElementById("whitelistBox").value = currentWhitelist.join("\n");
+          renderWhitelistStatus();
         }
       });
 
@@ -204,6 +229,8 @@
           await setDoc(doc(db, "whitelist", "current"), { ids });
           statusEl.textContent = `Saved ${ids.length} IDs.`;
           statusEl.className = "status ok";
+          currentWhitelist = ids;
+          renderWhitelistStatus();
         } catch(err){
           statusEl.textContent = "Failed to save — try again.";
           statusEl.className = "status err";
@@ -213,7 +240,9 @@
       // Track submitted entries in the background (no visible feed) so Roll Winner has a pool to draw from.
       onSnapshot(collection(db, "entries"), (snapshot) => {
         currentEntries = snapshot.docs.map(d => d.data().rainId);
+        submittedSuffixes = new Set(snapshot.docs.map(d => d.id));
         document.getElementById("rollWinnerBtn").disabled = currentEntries.length === 0;
+        renderWhitelistStatus();
       });
 
       document.getElementById("resetRoundBtn").addEventListener("click", async () => {

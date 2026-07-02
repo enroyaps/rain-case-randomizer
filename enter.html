@@ -300,8 +300,10 @@
     // ==================== STEP 2: battle builder ====================
     const grid = document.getElementById("caseGrid");
 
+    const SORTED_CASES = CASES.slice().sort((a, b) => a[1] - b[1]);
+
     function renderGrid(){
-      grid.innerHTML = CASES.map(([name, price]) => {
+      grid.innerHTML = SORTED_CASES.map(([name, price]) => {
         const file = ICON_FILES[name];
         const img = file ? `<img src="icons/${encodeURIComponent(file)}" alt="">` : "";
         return `<div class="case-cell" data-name="${escapeHtml(name)}">

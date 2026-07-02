@@ -40,6 +40,11 @@
   .status.ok{color:var(--ok);} .status.err{color:var(--err);} .status.muted{color:var(--muted);}
   .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:20px;}
   .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;color:var(--muted);font-size:0.85rem;}
+  .blur-toggle{filter:blur(6px);transition:filter .15s ease;cursor:pointer;}
+  .blur-toggle:hover{filter:blur(0);}
+  .signout-dock{display:flex;justify-content:center;margin-top:32px;padding-top:16px;border-top:1px solid var(--border);}
+  .signout-dock button{opacity:0.6;font-size:0.8rem;padding:8px 16px;}
+  .signout-dock button:hover{opacity:1;}
   .queue-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;min-height:32px;}
   .queue-chip{background:var(--panel2);border:1px solid var(--border);padding:5px 10px;border-radius:20px;font-size:0.82rem;}
   .reel{
@@ -82,11 +87,11 @@
 
   <div class="wrap" id="dashboard" style="display:none;">
     <div class="topbar">
-      <span>Signed in as <span id="whoami"></span></span>
-      <button class="secondary" id="signOutBtn">Sign out</button>
+      <span>Signed in as <span id="whoami" class="blur-toggle"></span></span>
+      <button class="secondary" id="toggleWhitelistBtn">Show Whitelist Editor</button>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="whitelistPanel" style="display:none;">
       <h2>Weekly Whitelist</h2>
       <textarea id="whitelistBox" placeholder="One Rain ID per line or comma-separated, e.g. 7JEU96GX"></textarea>
       <button id="saveWhitelistBtn">Save Whitelist</button>
@@ -113,6 +118,10 @@
         <div id="resultText" class="value"></div>
         <a id="battleCallLink" href="index.html" target="_blank" style="display:none;">Open Case Picker for this Battle →</a>
       </div>
+    </div>
+
+    <div class="signout-dock">
+      <button class="secondary" id="signOutBtn">Sign out</button>
     </div>
   </div>
 
@@ -172,6 +181,14 @@
     function initDashboard(){
       if(dashboardInitialized) return;
       dashboardInitialized = true;
+
+      const whitelistPanel = document.getElementById("whitelistPanel");
+      const toggleBtn = document.getElementById("toggleWhitelistBtn");
+      toggleBtn.addEventListener("click", () => {
+        const showing = whitelistPanel.style.display !== "none";
+        whitelistPanel.style.display = showing ? "none" : "block";
+        toggleBtn.textContent = showing ? "Show Whitelist Editor" : "Hide Whitelist Editor";
+      });
 
       // Load current whitelist into the textarea
       getDoc(doc(db, "whitelist", "current")).then(snap => {

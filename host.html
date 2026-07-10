@@ -186,7 +186,10 @@
     <div class="panel" id="historyPanel">
       <div class="history-head">
         <h2>Draw History</h2>
-        <span class="history-count" id="historyCount"></span>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="history-count" id="historyCount"></span>
+          <button class="secondary" id="clearHistoryBtn" style="font-size:0.72rem;padding:5px 12px;">Clear</button>
+        </div>
       </div>
       <div class="history-list" id="historyList">
         <div class="history-empty">No draws yet.</div>
@@ -210,7 +213,7 @@
       getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
     } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js");
     const {
-      getFirestore, doc, getDoc, setDoc, addDoc, collection, onSnapshot, getDocs, deleteDoc
+      getFirestore, doc, getDoc, setDoc, collection, onSnapshot, getDocs, deleteDoc
     } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js");
 
     const app = initializeApp(firebaseConfig);
@@ -300,6 +303,28 @@
       listEl.innerHTML = html;
     }
 
+    // History is stored locally on the host's machine — no backend rules needed,
+    // persists across reloads and days, works the moment the page loads.
+    const HISTORY_KEY = "drawHistory";
+    function loadHistory(){
+      try{
+        const arr = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+        return Array.isArray(arr)
+          ? arr.filter(x => x && typeof x.ts === "number").sort((a, b) => b.ts - a.ts)
+          : [];
+      } catch { return []; }
+    }
+    function addHistory(entry){
+      const arr = loadHistory();
+      arr.unshift(entry);
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(arr.slice(0, 500))); } catch {}
+      renderHistory(loadHistory()); // reload so it's always sorted newest-first
+    }
+    function clearHistory(){
+      try { localStorage.removeItem(HISTORY_KEY); } catch {}
+      renderHistory([]);
+    }
+
     function renderWhitelistStatus(){
       const done = currentWhitelist.filter(id => submittedSuffixes.has(id)).length;
       document.getElementById("doneCount").textContent = done;
@@ -361,13 +386,10 @@
         renderWhitelistStatus();
       });
 
-      // Live draw history — newest first, grouped by day in the panel above Sign out.
-      onSnapshot(collection(db, "history"), (snapshot) => {
-        const items = snapshot.docs
-          .map(d => d.data())
-          .filter(x => x && typeof x.ts === "number")
-          .sort((a, b) => b.ts - a.ts);
-        renderHistory(items);
+      // Draw history (local) — newest first, grouped by day in the panel above Sign out.
+      renderHistory(loadHistory());
+      document.getElementById("clearHistoryBtn").addEventListener("click", () => {
+        if(confirm("Clear all draw history? This can't be undone.")) clearHistory();
       });
 
       document.getElementById("resetRoundBtn").addEventListener("click", async () => {
@@ -532,12 +554,10 @@
         document.getElementById("resultText").textContent = `${currentWinner || "?"} — ${prize.label}`;
         resultBox.style.display = "block";
 
-        // Log this draw to history once per winner roll (re-rolling the prize won't duplicate).
+        // Save this draw to local history once per winner roll (re-rolling the prize won't duplicate).
         if(currentWinner && !winnerLogged){
           winnerLogged = true;
-          addDoc(collection(db, "history"), {
-            rainId: currentWinner, prize: prize.label, ts: Date.now()
-          }).catch(() => { winnerLogged = false; });
+          addHistory({ rainId: currentWinner, prize: prize.label, ts: Date.now() });
         }
 
         if(prize.label !== "Battle Call" || !currentWinner) return;

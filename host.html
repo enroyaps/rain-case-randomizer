@@ -48,6 +48,27 @@
   .signout-dock{display:flex;justify-content:center;margin-top:32px;padding-top:16px;border-top:1px solid var(--border);}
   .signout-dock button{opacity:0.6;font-size:0.8rem;padding:8px 16px;}
   .signout-dock button:hover{opacity:1;}
+  .history-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .history-head h2{margin:0;}
+  .history-count{color:var(--muted);font-size:0.8rem;}
+  .history-list{max-height:300px;overflow-y:auto;padding-right:6px;}
+  .history-list::-webkit-scrollbar{width:8px;}
+  .history-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+  .history-list::-webkit-scrollbar-track{background:transparent;}
+  .history-day-label{
+    position:sticky;top:0;background:var(--panel);color:var(--cyan);font-size:0.72rem;
+    text-transform:uppercase;letter-spacing:.06em;font-weight:800;padding:6px 2px;z-index:1;
+  }
+  .history-row{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);}
+  .history-avatar{
+    width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:1.15rem;flex-shrink:0;
+  }
+  .history-main{flex:1;min-width:0;}
+  .history-id{font-weight:700;color:var(--goldLight);font-size:0.9rem;}
+  .history-prize{color:var(--muted);font-size:0.8rem;}
+  .history-time{color:var(--muted);font-size:0.75rem;flex-shrink:0;white-space:nowrap;}
+  .history-empty{color:var(--muted);font-size:0.85rem;text-align:center;padding:14px 0;}
   .wl-status-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
   .wl-chip{
     display:flex;align-items:center;gap:6px;border:1px solid var(--border);
@@ -162,6 +183,16 @@
       </div>
     </div>
 
+    <div class="panel" id="historyPanel">
+      <div class="history-head">
+        <h2>Draw History</h2>
+        <span class="history-count" id="historyCount"></span>
+      </div>
+      <div class="history-list" id="historyList">
+        <div class="history-empty">No draws yet.</div>
+      </div>
+    </div>
+
     <div class="signout-dock">
       <button class="secondary" id="signOutBtn">Sign out</button>
     </div>
@@ -179,7 +210,7 @@
       getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
     } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js");
     const {
-      getFirestore, doc, getDoc, setDoc, collection, onSnapshot, getDocs, deleteDoc
+      getFirestore, doc, getDoc, setDoc, addDoc, collection, onSnapshot, getDocs, deleteDoc
     } = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js");
 
     const app = initializeApp(firebaseConfig);
@@ -222,6 +253,52 @@
     let currentWinner = null;
     let currentWhitelist = [];
     let submittedSuffixes = new Set();
+    let winnerLogged = false;
+
+    // --- draw history (grouped by day, scrollable) ---
+    function historyDayLabel(ts){
+      const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      const then = new Date(ts), now = new Date();
+      const diffDays = Math.round((startOfDay(now) - startOfDay(then)) / 86400000);
+      if(diffDays === 0) return "Today";
+      if(diffDays === 1) return "Yesterday";
+      return then.toLocaleDateString(undefined, {
+        weekday: "short", month: "short", day: "numeric",
+        year: then.getFullYear() !== now.getFullYear() ? "numeric" : undefined
+      });
+    }
+
+    function renderHistory(items){
+      const listEl = document.getElementById("historyList");
+      const countEl = document.getElementById("historyCount");
+      if(!items.length){
+        listEl.innerHTML = `<div class="history-empty">No draws yet.</div>`;
+        countEl.textContent = "";
+        return;
+      }
+      const todayCount = items.filter(it => historyDayLabel(it.ts) === "Today").length;
+      countEl.textContent = `${todayCount} today · ${items.length} total`;
+
+      let html = "", lastLabel = null;
+      for(const it of items){
+        const label = historyDayLabel(it.ts);
+        if(label !== lastLabel){
+          html += `<div class="history-day-label">${label}</div>`;
+          lastLabel = label;
+        }
+        const av = avatarFor(it.rainId || "");
+        const time = new Date(it.ts).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+        html += `<div class="history-row">
+          <div class="history-avatar" style="background:hsl(${av.hue},55%,42%);">${av.emoji}</div>
+          <div class="history-main">
+            <div class="history-id">${it.rainId || "?"}</div>
+            <div class="history-prize">${it.prize || ""}</div>
+          </div>
+          <div class="history-time">${time}</div>
+        </div>`;
+      }
+      listEl.innerHTML = html;
+    }
 
     function renderWhitelistStatus(){
       const done = currentWhitelist.filter(id => submittedSuffixes.has(id)).length;
@@ -282,6 +359,15 @@
         submittedSuffixes = new Set(completedDocs.map(d => d.id));
         document.getElementById("rollWinnerBtn").disabled = currentEntries.length === 0;
         renderWhitelistStatus();
+      });
+
+      // Live draw history — newest first, grouped by day in the panel above Sign out.
+      onSnapshot(collection(db, "history"), (snapshot) => {
+        const items = snapshot.docs
+          .map(d => d.data())
+          .filter(x => x && typeof x.ts === "number")
+          .sort((a, b) => b.ts - a.ts);
+        renderHistory(items);
       });
 
       document.getElementById("resetRoundBtn").addEventListener("click", async () => {
@@ -402,6 +488,7 @@
       document.getElementById("resultBox").style.display = "none";
       const winner = currentEntries[randomIndex(currentEntries.length)];
       currentWinner = winner;
+      winnerLogged = false;
       spinReel(document.getElementById("winnerTrack"), currentEntries, winner, 92, 1400, (rainId, isFinal) => {
         const av = avatarFor(rainId);
         return `<div class="reel-item avatar-item">
@@ -444,6 +531,14 @@
         const resultBox = document.getElementById("resultBox");
         document.getElementById("resultText").textContent = `${currentWinner || "?"} — ${prize.label}`;
         resultBox.style.display = "block";
+
+        // Log this draw to history once per winner roll (re-rolling the prize won't duplicate).
+        if(currentWinner && !winnerLogged){
+          winnerLogged = true;
+          addDoc(collection(db, "history"), {
+            rainId: currentWinner, prize: prize.label, ts: Date.now()
+          }).catch(() => { winnerLogged = false; });
+        }
 
         if(prize.label !== "Battle Call" || !currentWinner) return;
 

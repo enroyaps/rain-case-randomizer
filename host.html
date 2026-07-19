@@ -152,6 +152,13 @@
   .modal-prize .prize-icon{transform:scale(2.2);}
   .modal-battle{margin-top:20px;text-align:left;border-top:1px solid var(--border);padding-top:16px;}
   .modal-battle .battle-cases-grid{justify-content:center;margin-top:10px;}
+  .modal-fair{margin-top:18px;text-align:left;border-top:1px solid var(--border);padding-top:14px;font-size:0.78rem;color:var(--muted);line-height:1.5;}
+  .modal-fair .fair-head{color:var(--cyan);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:0.72rem;margin-bottom:8px;}
+  .modal-fair a{color:var(--cyan);font-weight:700;text-decoration:none;}
+  .modal-fair a:hover{text-decoration:underline;}
+  .modal-fair code{display:block;word-break:break-all;background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;margin:8px 0;color:var(--goldLight);font-size:0.72rem;}
+  .modal-fair summary{cursor:pointer;color:var(--text);font-weight:700;}
+  .modal-fair pre{white-space:pre-wrap;word-break:break-word;font-size:0.7rem;margin:8px 0 0;color:var(--muted);}
   .setup-warning{
     background:#2c1a12;border:1px solid #6b4a1a;color:#f4c778;padding:14px;border-radius:10px;
     font-size:0.82rem;text-align:left;line-height:1.5;max-width:400px;margin:80px auto;
@@ -209,6 +216,7 @@
       <p class="reel-label">Prize</p>
       <div class="reel" id="prizeReel"><div class="reel-track" id="prizeTrack"></div></div>
       <button id="rollBtn" disabled>ROLL</button>
+      <div id="drawStatus" class="status" style="text-align:center;margin-top:10px;"></div>
     </div>
 
     <div class="panel" id="historyPanel">
@@ -242,6 +250,7 @@
         <div id="modalBattleMeta" style="color:var(--muted);font-size:0.85rem;margin-bottom:10px;"></div>
         <div id="modalBattleGrid" class="battle-cases-grid"></div>
       </div>
+      <div class="modal-fair" id="modalFair" style="display:none;"></div>
     </div>
   </div>
 
@@ -629,12 +638,70 @@
       reelEl.classList.add("landed");
     }
 
+    // ---- EOS provably-fair randomness ----
+    // We commit to a FUTURE EOS block before the outcome is known, then derive the
+    // winner + prize from that block's hash. Nobody can predict or control a future
+    // block hash, so the draw can't be rigged, and anyone can recompute the result.
+    const EOS_NODES = ["https://eos.greymass.com", "https://api.eosn.io", "https://eos.eosphere.io"];
+    const EOS_CONFIRM_AHEAD = 12; // commit this many blocks into the future (~6s)
+
+    async function eosRpc(path, body){
+      let lastErr;
+      for(const base of EOS_NODES){
+        try{
+          const res = await fetch(base + path, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+          });
+          if(!res.ok) throw new Error("HTTP " + res.status);
+          return await res.json();
+        } catch(e){ lastErr = e; }
+      }
+      throw lastErr || new Error("All EOS nodes unreachable");
+    }
+    const eosGetInfo  = () => eosRpc("/v1/chain/get_info", {});
+    const eosGetBlock = (num) => eosRpc("/v1/chain/get_block", { block_num_or_id: num });
+
+    // Wait until the target block is irreversible (final), then return its hash.
+    async function eosResolveBlockHash(target, onTick){
+      const deadline = Date.now() + 90000;
+      while(Date.now() < deadline){
+        const info = await eosGetInfo();
+        if(info.last_irreversible_block_num >= target){
+          const blk = await eosGetBlock(target);
+          if(blk && blk.id) return blk.id;
+          throw new Error("Block returned no id");
+        }
+        if(onTick) onTick(target - info.last_irreversible_block_num);
+        await new Promise(r => setTimeout(r, 1000));
+      }
+      throw new Error("Timed out waiting for EOS block to finalize");
+    }
+
+    async function sha256Hex(str){
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+    // Deterministic winner + prize from a block hash and the (sorted) entrant set.
+    async function deriveOutcome(blockId, entrants){
+      const key = entrants.join(",");
+      const wHash = await sha256Hex(`${blockId}:winner:${key}`);
+      const winner = entrants[Number(BigInt("0x" + wHash) % BigInt(entrants.length))];
+      const totalW = PRIZES.reduce((s, p) => s + p.weight, 0);
+      const pHash = await sha256Hex(`${blockId}:prize:${key}`);
+      let r = Number(BigInt("0x" + pHash) % BigInt(totalW));
+      let prize = PRIZES[PRIZES.length - 1];
+      for(const p of PRIZES){ if(r < p.weight){ prize = p; break; } r -= p.weight; }
+      return { winner, prize, entrantsKey: key };
+    }
+
     // ---- win modal ----
     function hideModal(){
       document.getElementById("resultModal").classList.remove("show");
       idleReels(); // resume the continuous loop
     }
-    async function showResultModal(winner, prizeLabel){
+    async function showResultModal(winner, prizeLabel, fair){
       const av = avatarFor(winner);
       document.getElementById("modalAvatar").innerHTML =
         `<div class="avatar-circle" style="background:hsl(${av.hue},55%,42%);">${av.emoji}</div>`;
@@ -651,6 +718,26 @@
       const namesEl = document.getElementById("modalBattleNames");
       battleEl.style.display = "none";
       gridEl.innerHTML = ""; metaEl.textContent = ""; namesEl.textContent = "";
+
+      // Provably-fair panel: shows the committed EOS block + hash and how to verify.
+      const fairEl = document.getElementById("modalFair");
+      if(fair && fair.blockNum){
+        const n = fair.entrantsKey.split(",").length;
+        fairEl.style.display = "block";
+        fairEl.innerHTML = `
+          <div class="fair-head">Provably fair · EOS</div>
+          <div>Winner &amp; prize were derived from EOS block
+            <a href="https://bloks.io/block/${fair.blockNum}" target="_blank" rel="noopener">#${fair.blockNum.toLocaleString()} &#8599;</a>.
+            Its hash didn't exist when the block was committed, so the result can't be rigged.</div>
+          <code>${fair.blockId}</code>
+          <details><summary>How to verify</summary><pre>entrants = ${fair.entrantsKey}
+N = ${n}
+winner = sort(entrants)[ SHA256(blockhash + ":winner:" + entrants) mod N ]
+prize  = weighted( SHA256(blockhash + ":prize:" + entrants) mod 100 )
+weights: 5 Coins 60, 10 Coins 20, Battle Call 18, 25 Coins 2</pre></details>`;
+      } else {
+        fairEl.style.display = "none";
+      }
 
       document.getElementById("resultModal").classList.add("show");
 
@@ -690,19 +777,49 @@
     const PRIZE_DELAY_MS = 2000;
     let rolling = false;
 
-    function rollBoth(){
+    function setDrawStatus(msg, kind){
+      const el = document.getElementById("drawStatus");
+      el.textContent = msg || "";
+      el.className = "status" + (kind ? " " + kind : "");
+    }
+
+    async function rollBoth(){
       if(rolling || currentEntries.length === 0) return;
       rolling = true;
       const rollBtn = document.getElementById("rollBtn");
       rollBtn.disabled = true;
       hideModal();
 
-      const winner = currentEntries[randomIndex(currentEntries.length)];
+      // Fix the entrant set for this draw up front (sorted → deterministic to verify).
+      const entrants = [...currentEntries].sort();
+
+      // 1) Commit to a future EOS block, then wait for its hash. No local fallback:
+      //    if EOS can't be reached, the draw is blocked.
+      let blockNum, blockId, outcome;
+      try{
+        setDrawStatus("Connecting to EOS…", "muted");
+        const info = await eosGetInfo();
+        blockNum = info.head_block_num + EOS_CONFIRM_AHEAD;
+        setDrawStatus(`Committed to EOS block #${blockNum.toLocaleString()} — waiting for it to finalize…`, "muted");
+        blockId = await eosResolveBlockHash(blockNum, (left) => {
+          setDrawStatus(`Committed to EOS block #${blockNum.toLocaleString()} — ${left} block(s) until final…`, "muted");
+        });
+        outcome = await deriveOutcome(blockId, entrants);
+      } catch(err){
+        setDrawStatus("EOS unavailable — draw blocked. Check your connection and roll again.", "err");
+        rolling = false;
+        rollBtn.disabled = currentEntries.length === 0;
+        return;
+      }
+
+      const winner = outcome.winner;
+      const prize = outcome.prize;
+      const fair = { blockNum, blockId, entrantsKey: outcome.entrantsKey };
       currentWinner = winner;
       winnerLogged = false;
-      const prize = pickWeightedPrize();
+      setDrawStatus(`Verified against EOS block #${blockNum.toLocaleString()} ✓`, "ok");
 
-      // Winner reel spins immediately.
+      // 2) Animate the reels to the already-decided result.
       spinReel(
         document.getElementById("winnerTrack"),
         document.getElementById("winnerReel"),
@@ -710,7 +827,6 @@
       );
       setTimeout(() => flashLanded(document.getElementById("winnerReel")), WINNER_SPIN_MS + 120);
 
-      // Prize reel joins in a couple seconds later, while the winner is still spinning.
       setTimeout(() => {
         spinReel(
           document.getElementById("prizeTrack"),
@@ -720,16 +836,15 @@
         setTimeout(() => flashLanded(document.getElementById("prizeReel")), PRIZE_SPIN_MS + 120);
       }, PRIZE_DELAY_MS);
 
-      // Both landed → log + reveal modal.
       const totalMs = PRIZE_DELAY_MS + PRIZE_SPIN_MS + 450;
       setTimeout(() => {
         rolling = false;
         rollBtn.disabled = currentEntries.length === 0;
         if(currentWinner && !winnerLogged){
           winnerLogged = true;
-          addHistory({ rainId: currentWinner, prize: prize.label, ts: Date.now() });
+          addHistory({ rainId: currentWinner, prize: prize.label, ts: Date.now(), eosBlock: blockNum, eosHash: blockId });
         }
-        showResultModal(winner, prize.label);
+        showResultModal(winner, prize.label, fair);
       }, totalMs);
     }
 

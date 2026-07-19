@@ -103,7 +103,8 @@
     width:100%;flex:1;border:1px solid var(--border);border-radius:10px;background:var(--panel);
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:6px;
   }
-  .reel-item.final .slot-card{border-color:var(--gold);box-shadow:0 0 14px rgba(155,92,255,.5);}
+  /* NOTE: the winning card is intentionally styled identically to every other
+     card so it can't be spotted before it lands under the ticker. */
   .avatar-circle{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;}
   .avatar-id{font-size:0.72rem;font-weight:700;color:var(--goldLight);text-align:center;word-break:break-all;line-height:1.1;}
   .prize-icon{transform:scale(2);transform-origin:center;height:24px;display:flex;align-items:center;}

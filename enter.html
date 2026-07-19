@@ -191,6 +191,9 @@
       <h1>Build Your Battle</h1>
       <p class="sub">Entering as <b id="builderRainId"></b>. Pick your cases and battle settings, then submit.</p>
 
+      <label for="usernameInput" style="display:block;font-size:0.82rem;color:var(--muted);font-weight:700;margin-bottom:4px;">Your username (so the host knows who you are)</label>
+      <input id="usernameInput" type="text" maxlength="24" placeholder="e.g. your Kick/Discord name" style="margin-bottom:16px;">
+
       <div class="budget-bar">
         <div class="budget-track">
           <div class="budget-fill" id="budgetFill"></div>
@@ -320,6 +323,7 @@
 
       if(prefill){
         selected = prefill.cases.slice();
+        if(prefill.username) document.getElementById("usernameInput").value = prefill.username;
         const sizeInput = document.querySelector(`input[name="battleSize"][value="${prefill.battleSize}"]`);
         const modeInput = document.querySelector(`input[name="baseMode"][value="${prefill.baseMode}"]`);
         if(sizeInput) sizeInput.checked = true;
@@ -640,6 +644,12 @@
     }
 
     submitBattleBtn.addEventListener("click", async () => {
+      const username = document.getElementById("usernameInput").value.trim();
+      if(!username){
+        setBattleStatus("Enter your username so the host knows who you are.", "err");
+        document.getElementById("usernameInput").focus();
+        return;
+      }
       if(selected.length === 0){
         setBattleStatus("Pick at least one case first.", "err");
         return;
@@ -665,6 +675,7 @@
       try{
         await setDoc(doc(db, "entries", currentRainSuffix), {
           rainId: "RN-" + currentRainSuffix,
+          username,
           cases: selected.slice(),
           total: Number(total.toFixed(2)),
           battleSize, baseMode, jackpot, terminal,

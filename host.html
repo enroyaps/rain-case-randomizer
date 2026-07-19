@@ -106,7 +106,8 @@
   /* NOTE: the winning card is intentionally styled identically to every other
      card so it can't be spotted before it lands under the ticker. */
   .avatar-circle{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;}
-  .avatar-id{font-size:0.72rem;font-weight:700;color:var(--goldLight);text-align:center;word-break:break-all;line-height:1.1;}
+  .avatar-name{font-size:0.76rem;font-weight:800;color:var(--text);text-align:center;line-height:1.15;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .avatar-id{font-size:0.66rem;font-weight:700;color:var(--goldLight);text-align:center;word-break:break-all;line-height:1.1;}
   .prize-icon{transform:scale(2);transform-origin:center;height:24px;display:flex;align-items:center;}
   .prize-label{font-size:0.78rem;font-weight:800;color:var(--text);text-align:center;}
   @keyframes reelLandPulse{
@@ -159,6 +160,10 @@
   .modal-fair code{display:block;word-break:break-all;background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;margin:8px 0;color:var(--goldLight);font-size:0.72rem;}
   .modal-fair summary{cursor:pointer;color:var(--text);font-weight:700;}
   .modal-fair pre{white-space:pre-wrap;word-break:break-word;font-size:0.7rem;margin:8px 0 0;color:var(--muted);}
+  .verify-btn{display:inline-block;margin:4px 0 2px;padding:9px 16px;border-radius:9px;
+    background:linear-gradient(180deg,var(--goldLight),var(--gold));color:#fbf7ff !important;
+    font-weight:800;text-decoration:none !important;font-size:0.82rem;}
+  .verify-btn:hover{filter:brightness(1.08);}
   .setup-warning{
     background:#2c1a12;border:1px solid #6b4a1a;color:#f4c778;padding:14px;border-radius:10px;
     font-size:0.82rem;text-align:left;line-height:1.5;max-width:400px;margin:80px auto;
@@ -306,10 +311,16 @@
 
     let dashboardInitialized = false;
     let currentEntries = [];
+    let entrantNames = {};   // rainId -> username
     let currentWinner = null;
     let currentWhitelist = [];
     let submittedSuffixes = new Set();
     let winnerLogged = false;
+
+    const nameFor = (rainId) => entrantNames[rainId] || "";
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    }
 
     // --- draw history (grouped by day, scrollable) ---
     function historyDayLabel(ts){
@@ -347,7 +358,7 @@
         html += `<div class="history-row">
           <div class="history-avatar" style="background:hsl(${av.hue},55%,42%);">${av.emoji}</div>
           <div class="history-main">
-            <div class="history-id">${it.rainId || "?"}</div>
+            <div class="history-id">${it.username ? escapeHtml(it.username) + " · " : ""}${it.rainId || "?"}</div>
             <div class="history-prize">${it.prize || ""}</div>
           </div>
           <div class="history-time">${time}</div>
@@ -434,6 +445,8 @@
       onSnapshot(collection(db, "entries"), (snapshot) => {
         const completedDocs = snapshot.docs.filter(d => Array.isArray(d.data().cases) && d.data().cases.length > 0);
         currentEntries = completedDocs.map(d => d.data().rainId);
+        entrantNames = {};
+        completedDocs.forEach(d => { const x = d.data(); if(x.username) entrantNames[x.rainId] = x.username; });
         submittedSuffixes = new Set(completedDocs.map(d => d.id));
         if(!rolling){
           document.getElementById("rollBtn").disabled = currentEntries.length === 0;
@@ -533,9 +546,11 @@
 
     function renderWinnerCard(rainId, isFinal){
       const av = avatarFor(rainId);
+      const name = nameFor(rainId);
       return `<div class="reel-item${isFinal ? " final" : ""}">
         <div class="slot-card">
           <div class="avatar-circle" style="background:hsl(${av.hue},55%,42%);">${av.emoji}</div>
+          ${name ? `<div class="avatar-name">${escapeHtml(name)}</div>` : ""}
           <div class="avatar-id">${rainId}</div>
         </div>
       </div>`;
@@ -705,7 +720,10 @@
       const av = avatarFor(winner);
       document.getElementById("modalAvatar").innerHTML =
         `<div class="avatar-circle" style="background:hsl(${av.hue},55%,42%);">${av.emoji}</div>`;
-      document.getElementById("modalWinner").textContent = winner;
+      const wName = nameFor(winner);
+      document.getElementById("modalWinner").innerHTML = wName
+        ? `${escapeHtml(wName)}<div style="font-size:0.85rem;color:var(--muted);font-weight:600;margin-top:3px;">${winner}</div>`
+        : winner;
 
       const isCoins = /Coins/.test(prizeLabel);
       const isBattle = prizeLabel === "Battle Call";
@@ -723,14 +741,19 @@
       const fairEl = document.getElementById("modalFair");
       if(fair && fair.blockNum){
         const n = fair.entrantsKey.split(",").length;
+        const verifyUrl = `verify.html?block=${fair.blockNum}`
+          + `&entrants=${encodeURIComponent(fair.entrantsKey)}`
+          + `&winner=${encodeURIComponent(winner)}&prize=${encodeURIComponent(prizeLabel)}`;
         fairEl.style.display = "block";
         fairEl.innerHTML = `
           <div class="fair-head">Provably fair · EOS</div>
           <div>Winner &amp; prize were derived from EOS block
-            <a href="https://bloks.io/block/${fair.blockNum}" target="_blank" rel="noopener">#${fair.blockNum.toLocaleString()} &#8599;</a>.
+            <b style="color:var(--goldLight);">#${fair.blockNum.toLocaleString()}</b>.
             Its hash didn't exist when the block was committed, so the result can't be rigged.</div>
           <code>${fair.blockId}</code>
-          <details><summary>How to verify</summary><pre>entrants = ${fair.entrantsKey}
+          <a class="verify-btn" href="${verifyUrl}" target="_blank" rel="noopener">Verify this draw &#8599;</a>
+          <details><summary>How to verify manually</summary><pre>block  = ${fair.blockNum}
+entrants = ${fair.entrantsKey}
 N = ${n}
 winner = sort(entrants)[ SHA256(blockhash + ":winner:" + entrants) mod N ]
 prize  = weighted( SHA256(blockhash + ":prize:" + entrants) mod 100 )
@@ -842,7 +865,7 @@ weights: 5 Coins 60, 10 Coins 20, Battle Call 18, 25 Coins 2</pre></details>`;
         rollBtn.disabled = currentEntries.length === 0;
         if(currentWinner && !winnerLogged){
           winnerLogged = true;
-          addHistory({ rainId: currentWinner, prize: prize.label, ts: Date.now(), eosBlock: blockNum, eosHash: blockId });
+          addHistory({ rainId: currentWinner, username: nameFor(currentWinner), prize: prize.label, ts: Date.now(), eosBlock: blockNum, eosHash: blockId });
         }
         showResultModal(winner, prize.label, fair);
       }, totalMs);

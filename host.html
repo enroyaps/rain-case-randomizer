@@ -657,7 +657,7 @@
     // We commit to a FUTURE EOS block before the outcome is known, then derive the
     // winner + prize from that block's hash. Nobody can predict or control a future
     // block hash, so the draw can't be rigged, and anyone can recompute the result.
-    const EOS_NODES = ["https://eos.greymass.com", "https://api.eosn.io", "https://eos.eosphere.io"];
+    const EOS_NODES = ["https://eos.greymass.com", "https://eos.eosphere.io", "https://api.main.alohaeos.com"];
     const EOS_CONFIRM_AHEAD = 12; // commit this many blocks into the future (~6s)
 
     async function eosRpc(path, body){

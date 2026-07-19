@@ -65,6 +65,7 @@
         <div class="row"><span class="k">Block hash (from chain)</span><span class="v" id="rHash" style="font-weight:400;font-size:0.78rem;"></span></div>
         <div class="row"><span class="k">Computed winner</span><span class="v" id="rWinner"></span></div>
         <div class="row"><span class="k">Computed prize</span><span class="v" id="rPrize"></span></div>
+        <div class="row"><span class="k">See it on a block explorer</span><span class="v" id="rExplorers"></span></div>
         <div id="verdict"></div>
       </div>
 
@@ -147,6 +148,9 @@ weights: 5 Coins 60, 10 Coins 20, Battle Call 18, 25 Coins 2</pre>
       $("rHash").textContent = blk.id;
       $("rWinner").textContent = out.winner;
       $("rPrize").textContent = out.prize;
+      $("rExplorers").innerHTML =
+        `<a href="https://eosauthority.com/block/${blockNum}?network=eos" target="_blank" rel="noopener">EOS Authority</a> · ` +
+        `<a href="https://eosflare.io/block/${blockNum}" target="_blank" rel="noopener">EOS Flare</a>`;
       $("result").classList.add("show");
 
       const claimWinner = params.get("winner");

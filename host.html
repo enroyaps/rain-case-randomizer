@@ -76,22 +76,38 @@
   }
   .wl-chip.done{border-color:var(--ok);color:var(--ok);}
   .wl-chip.pending{border-color:var(--err);color:var(--err);}
+  /* --- horizontal spinning reels (CS:GO-style) --- */
   .reel{
-    width:280px;max-width:100%;height:92px;overflow:hidden;border:2px solid var(--border);border-radius:10px;
-    background:var(--panel2);position:relative;margin:0 auto 14px;
+    width:100%;max-width:660px;height:150px;overflow:hidden;border:2px solid var(--border);border-radius:12px;
+    background:var(--panel2);position:relative;margin:0 auto 16px;
   }
-  #rollWinnerBtn, #rollPrizeBtn{display:block;margin:0 auto;}
+  .reel-label{text-align:center;color:var(--muted);font-size:0.72rem;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;font-weight:700;}
+  #rollBtn{display:block;margin:8px auto 0;padding:14px 40px;font-size:1rem;}
+  /* center ticker line */
+  .reel::before{
+    content:"";position:absolute;left:50%;top:0;bottom:0;width:3px;margin-left:-1.5px;z-index:3;
+    background:linear-gradient(180deg,var(--cyan),var(--gold));box-shadow:0 0 10px var(--cyan);
+  }
+  /* edge fade */
   .reel::after{
-    content:"";position:absolute;inset:0;
-    box-shadow:inset 0 12px 12px -10px #000, inset 0 -12px 12px -10px #000;
-    pointer-events:none;border-radius:8px;
+    content:"";position:absolute;inset:0;z-index:2;pointer-events:none;border-radius:10px;
+    box-shadow:inset 46px 0 40px -24px var(--panel2), inset -46px 0 40px -24px var(--panel2),
+               inset 0 10px 10px -8px #000, inset 0 -10px 10px -8px #000;
   }
-  .reel-track{display:flex;flex-direction:column;}
-  .reel-item{height:92px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;}
-  .reel-item.avatar-item{flex-direction:column;gap:4px;}
-  .avatar-circle{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;}
-  .avatar-id{font-size:0.82rem;font-weight:700;color:var(--goldLight);}
-  .reel-item.prize-item{gap:8px;}
+  .reel-track{display:flex;flex-direction:row;height:100%;will-change:transform;}
+  .reel-item{
+    flex:0 0 116px;width:116px;height:100%;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:6px;padding:8px;
+  }
+  .reel-item .slot-card{
+    width:100%;flex:1;border:1px solid var(--border);border-radius:10px;background:var(--panel);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:6px;
+  }
+  .reel-item.final .slot-card{border-color:var(--gold);box-shadow:0 0 14px rgba(155,92,255,.5);}
+  .avatar-circle{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;}
+  .avatar-id{font-size:0.72rem;font-weight:700;color:var(--goldLight);text-align:center;word-break:break-all;line-height:1.1;}
+  .prize-icon{transform:scale(2);transform-origin:center;height:24px;display:flex;align-items:center;}
+  .prize-label{font-size:0.78rem;font-weight:800;color:var(--text);text-align:center;}
   @keyframes reelLandPulse{
     0%{box-shadow:0 0 0 0 rgba(155,92,255,.65);}
     70%{box-shadow:0 0 0 16px rgba(155,92,255,0);}
@@ -114,6 +130,27 @@
     background:var(--panel);
   }
   .battle-case-card img{width:100%;height:100%;object-fit:contain;display:block;}
+  /* --- win modal --- */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(4,3,9,.82);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;z-index:100;padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-card{
+    background:var(--panel);border:1px solid var(--gold);border-radius:18px;padding:26px 28px;
+    max-width:480px;width:100%;text-align:center;box-shadow:0 0 44px rgba(155,92,255,.45);
+    max-height:90vh;overflow-y:auto;animation:modalPop .28s ease;
+  }
+  @keyframes modalPop{0%{transform:scale(.9);opacity:0;}100%{transform:scale(1);opacity:1;}}
+  .modal-close{float:right;background:transparent;border:none;color:var(--muted);font-size:1.5rem;line-height:1;cursor:pointer;padding:0;}
+  .modal-close:hover{color:var(--text);}
+  .modal-sub{color:var(--cyan);font-size:0.74rem;text-transform:uppercase;letter-spacing:.12em;font-weight:800;margin-bottom:14px;}
+  .modal-card .avatar-circle{width:82px;height:82px;font-size:2.7rem;margin:0 auto 12px;}
+  .modal-winner{font-size:1.35rem;font-weight:800;color:var(--goldLight);margin-bottom:10px;word-break:break-all;}
+  .modal-prize{display:flex;align-items:center;justify-content:center;gap:12px;font-size:1.5rem;font-weight:800;color:var(--text);margin-bottom:4px;}
+  .modal-prize .prize-icon{transform:scale(2.2);}
+  .modal-battle{margin-top:20px;text-align:left;border-top:1px solid var(--border);padding-top:16px;}
+  .modal-battle .battle-cases-grid{justify-content:center;margin-top:10px;}
   .setup-warning{
     background:#2c1a12;border:1px solid #6b4a1a;color:#f4c778;padding:14px;border-radius:10px;
     font-size:0.82rem;text-align:left;line-height:1.5;max-width:400px;margin:80px auto;
@@ -166,21 +203,11 @@
 
     <div class="panel">
       <h2>Draw</h2>
+      <p class="reel-label">Winner</p>
       <div class="reel" id="winnerReel"><div class="reel-track" id="winnerTrack"></div></div>
-      <button id="rollWinnerBtn">Roll Winner</button>
-
-      <div class="reel" id="prizeReel" style="margin-top:20px;"><div class="reel-track" id="prizeTrack"></div></div>
-      <button id="rollPrizeBtn" disabled>Roll Prize</button>
-
-      <div id="resultBox" class="result-box" style="display:none;">
-        <div class="label">Result</div>
-        <div id="resultText" class="value"></div>
-        <div id="battleCasesArea" style="display:none;margin-top:16px;text-align:left;">
-          <div id="battleCasesNames" style="color:var(--text);font-size:0.95rem;font-weight:700;margin-bottom:6px;user-select:all;"></div>
-          <div id="battleCasesMeta" style="color:var(--muted);font-size:0.85rem;margin-bottom:10px;"></div>
-          <div id="battleCasesGrid" class="battle-cases-grid"></div>
-        </div>
-      </div>
+      <p class="reel-label">Prize</p>
+      <div class="reel" id="prizeReel"><div class="reel-track" id="prizeTrack"></div></div>
+      <button id="rollBtn" disabled>ROLL</button>
     </div>
 
     <div class="panel" id="historyPanel">
@@ -198,6 +225,22 @@
 
     <div class="signout-dock">
       <button class="secondary" id="signOutBtn">Sign out</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="resultModal">
+    <div class="modal-card">
+      <button class="modal-close" id="modalCloseBtn">&times;</button>
+      <div class="modal-sub">Winner</div>
+      <div id="modalAvatar"></div>
+      <div class="modal-winner" id="modalWinner"></div>
+      <div class="modal-sub" style="color:var(--muted);margin-bottom:8px;">won</div>
+      <div class="modal-prize" id="modalPrize"></div>
+      <div class="modal-battle" id="modalBattle" style="display:none;">
+        <div id="modalBattleNames" style="color:var(--text);font-size:0.95rem;font-weight:700;margin-bottom:6px;user-select:all;"></div>
+        <div id="modalBattleMeta" style="color:var(--muted);font-size:0.85rem;margin-bottom:10px;"></div>
+        <div id="modalBattleGrid" class="battle-cases-grid"></div>
+      </div>
     </div>
   </div>
 
@@ -382,7 +425,7 @@
         const completedDocs = snapshot.docs.filter(d => Array.isArray(d.data().cases) && d.data().cases.length > 0);
         currentEntries = completedDocs.map(d => d.data().rainId);
         submittedSuffixes = new Set(completedDocs.map(d => d.id));
-        document.getElementById("rollWinnerBtn").disabled = currentEntries.length === 0;
+        if(!rolling) document.getElementById("rollBtn").disabled = currentEntries.length === 0;
         renderWhitelistStatus();
       });
 
@@ -399,14 +442,17 @@
         const snap = await getDocs(collection(db, "entries"));
         await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
         currentWinner = null;
-        document.getElementById("resultBox").style.display = "none";
-        document.getElementById("rollPrizeBtn").disabled = true;
+        hideModal();
+        document.getElementById("rollBtn").disabled = true;
         statusEl.textContent = "Queue cleared.";
         statusEl.className = "status ok";
       });
 
-      document.getElementById("rollWinnerBtn").addEventListener("click", rollWinner);
-      document.getElementById("rollPrizeBtn").addEventListener("click", rollPrize);
+      document.getElementById("rollBtn").addEventListener("click", rollBoth);
+      document.getElementById("modalCloseBtn").addEventListener("click", hideModal);
+      document.getElementById("resultModal").addEventListener("click", (e) => {
+        if(e.target.id === "resultModal") hideModal();
+      });
 
       document.getElementById("pwResetBtn").addEventListener("click", async () => {
         const idRaw = document.getElementById("pwResetId").value.trim().toUpperCase().replace(/^RN-?/, "");
@@ -443,12 +489,12 @@
       crypto.getRandomValues(buf);
       return buf[0] / (0xFFFFFFFF + 1);
     }
+    // Actual odds (Cases removed — its weight folded into Battle Call).
     const PRIZES = [
       { label: "5 Coins", weight: 63 },
       { label: "10 Coins", weight: 20 },
-      { label: "Battle Call", weight: 13 },
+      { label: "Battle Call", weight: 15 },
       { label: "25 Coins", weight: 2 },
-      { label: "Cases", weight: 2 },
     ];
     function pickWeightedPrize(){
       const total = PRIZES.reduce((s,p) => s + p.weight, 0);
@@ -458,6 +504,36 @@
         r -= p.weight;
       }
       return PRIZES[PRIZES.length - 1];
+    }
+
+    // Purely visual — fills the prize reel with lots of cards so viewers see many
+    // prizes scrolling by. Odds are unaffected (the winner is chosen by pickWeightedPrize).
+    const PRIZE_DISPLAY_POOL = [
+      ...Array(10).fill("5 Coins"),
+      ...Array(8).fill("10 Coins"),
+      ...Array(5).fill("25 Coins"),
+      ...Array(6).fill("Battle Call"),
+    ];
+
+    function renderWinnerCard(rainId, isFinal){
+      const av = avatarFor(rainId);
+      return `<div class="reel-item${isFinal ? " final" : ""}">
+        <div class="slot-card">
+          <div class="avatar-circle" style="background:hsl(${av.hue},55%,42%);">${av.emoji}</div>
+          <div class="avatar-id">${rainId}</div>
+        </div>
+      </div>`;
+    }
+    function renderPrizeCard(label, isFinal, idx){
+      const isCoins = /Coins/.test(label);
+      const isBattle = label === "Battle Call";
+      const icon = isCoins ? coinSvg("p" + idx) : isBattle ? BATTLE_SVG : "";
+      return `<div class="reel-item${isFinal ? " final" : ""}">
+        <div class="slot-card">
+          <div class="prize-icon">${icon}</div>
+          <div class="prize-label">${label}</div>
+        </div>
+      </div>`;
     }
 
     async function hashPassword(pw){
@@ -483,18 +559,29 @@
 
     const BATTLE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16" style="display:block;flex-shrink:0;color:var(--goldLight);"><path d="M9.6 2.2h.8L11.6 1l2.8-.4-.4 2.8-1.2 1.2v.8l-1.566 1.634L12.8 8.6l-3.2 3.2-6.4-6.4v-.8L2 3.4 1.6.6l2.8.4 1.2 1.2h.8l1.634 1.634zm4.8 8-3.2 3.2 1.6 1.6 3.2-3.2zm-7.864 1.464-3.2-3.2L0 11.8 3.2 15z"></path></svg>`;
 
-    function spinReel(trackEl, fillerItems, finalLabel, itemHeight, duration, renderItem){
+    // Horizontal reel: cards scroll left and decelerate, landing with the final
+    // card centered under the ticker line. ITEM_W must match .reel-item width in CSS.
+    const ITEM_W = 116;
+    function spinReel(trackEl, reelEl, pool, finalLabel, duration, renderItem){
+      const FILLER = 38;
       const items = [];
-      for(let i=0;i<14;i++) items.push(fillerItems[randomIndex(fillerItems.length)]);
+      for(let i=0;i<FILLER;i++) items.push(pool[randomIndex(pool.length)]);
       items.push(finalLabel);
-      const render = renderItem || (t => `<div class="reel-item">${t}</div>`);
-      trackEl.innerHTML = items.map((t, idx) => render(t, idx === items.length - 1, idx)).join("");
+      const finalIdx = items.length - 1;
+      trackEl.innerHTML = items.map((t, idx) => renderItem(t, idx === finalIdx, idx)).join("");
+
       trackEl.style.transition = "none";
-      trackEl.style.transform = "translateY(0px)";
+      trackEl.style.transform = "translateX(0px)";
       void trackEl.offsetHeight;
+
+      const viewport = reelEl.clientWidth;
+      const jitter = Math.round((randomFloat() - 0.5) * ITEM_W * 0.55); // land slightly off dead-center
+      const finalCenter = finalIdx * ITEM_W + ITEM_W / 2;
+      const targetX = (viewport / 2) - finalCenter + jitter;
+
       requestAnimationFrame(() => {
-        trackEl.style.transition = `transform ${duration}ms cubic-bezier(.14,.66,.2,1)`;
-        trackEl.style.transform = `translateY(-${itemHeight * (items.length - 1)}px)`;
+        trackEl.style.transition = `transform ${duration}ms cubic-bezier(.12,.68,.18,1)`;
+        trackEl.style.transform = `translateX(${targetX}px)`;
       });
     }
 
@@ -504,90 +591,109 @@
       reelEl.classList.add("landed");
     }
 
-    function rollWinner(){
-      if(currentEntries.length === 0) return;
-      document.getElementById("rollWinnerBtn").disabled = true;
-      document.getElementById("resultBox").style.display = "none";
+    // ---- win modal ----
+    function hideModal(){
+      document.getElementById("resultModal").classList.remove("show");
+    }
+    async function showResultModal(winner, prizeLabel){
+      const av = avatarFor(winner);
+      document.getElementById("modalAvatar").innerHTML =
+        `<div class="avatar-circle" style="background:hsl(${av.hue},55%,42%);">${av.emoji}</div>`;
+      document.getElementById("modalWinner").textContent = winner;
+
+      const isCoins = /Coins/.test(prizeLabel);
+      const isBattle = prizeLabel === "Battle Call";
+      document.getElementById("modalPrize").innerHTML =
+        `<span class="prize-icon">${isCoins ? coinSvg("m") : isBattle ? BATTLE_SVG : ""}</span><span>${prizeLabel}</span>`;
+
+      const battleEl = document.getElementById("modalBattle");
+      const gridEl = document.getElementById("modalBattleGrid");
+      const metaEl = document.getElementById("modalBattleMeta");
+      const namesEl = document.getElementById("modalBattleNames");
+      battleEl.style.display = "none";
+      gridEl.innerHTML = ""; metaEl.textContent = ""; namesEl.textContent = "";
+
+      document.getElementById("resultModal").classList.add("show");
+
+      if(!isBattle || !winner) return;
+
+      // Battle Call — pull and show the winner's submitted battle.
+      battleEl.style.display = "block";
+      metaEl.textContent = "Loading their battle...";
+      try{
+        const suffix = winner.replace(/^RN-/, "");
+        const snap = await getDoc(doc(db, "entries", suffix));
+        const data = snap.exists() ? snap.data() : null;
+        if(data && Array.isArray(data.cases) && data.cases.length){
+          const extras = [
+            data.jackpot ? "Jackpot" : null,
+            data.terminal ? "Terminal" : null,
+            data.borrowPercent ? `Borrow ${data.borrowPercent}% (paid ${data.payAmount})` : null
+          ].filter(Boolean).join(" + ");
+          metaEl.textContent = `${data.battleSize || ""} ${data.baseMode || ""}${extras ? " + " + extras : ""} — total ${data.total} coins`;
+          namesEl.textContent = data.cases.join(", ");
+          gridEl.innerHTML = data.cases.map(name => {
+            const file = ICON_FILES[name];
+            return `<div class="battle-case-card">${file ? `<img src="icons/${encodeURIComponent(file)}" alt="">` : name}</div>`;
+          }).join("");
+        } else {
+          metaEl.textContent = "This user hasn't submitted a battle yet.";
+        }
+      } catch(err){
+        metaEl.textContent = "Couldn't load their battle picks.";
+      }
+    }
+
+    // Timing: winner spins first; the prize reel starts ~2s later while the winner
+    // is still spinning; the modal reveals once both have landed.
+    const WINNER_SPIN_MS = 3400;
+    const PRIZE_SPIN_MS  = 3400;
+    const PRIZE_DELAY_MS = 2000;
+    let rolling = false;
+
+    function rollBoth(){
+      if(rolling || currentEntries.length === 0) return;
+      rolling = true;
+      const rollBtn = document.getElementById("rollBtn");
+      rollBtn.disabled = true;
+      hideModal();
+
       const winner = currentEntries[randomIndex(currentEntries.length)];
       currentWinner = winner;
       winnerLogged = false;
-      spinReel(document.getElementById("winnerTrack"), currentEntries, winner, 92, 1400, (rainId, isFinal) => {
-        const av = avatarFor(rainId);
-        return `<div class="reel-item avatar-item">
-          <div class="avatar-circle" style="background:hsl(${av.hue},55%,42%);">${av.emoji}</div>
-          ${isFinal ? `<div class="avatar-id">${rainId}</div>` : ""}
-        </div>`;
-      });
-      setTimeout(() => {
-        document.getElementById("rollWinnerBtn").disabled = false;
-        document.getElementById("rollPrizeBtn").disabled = false;
-        flashLanded(document.getElementById("winnerReel"));
-      }, 1550);
-    }
-
-    function rollPrize(){
-      document.getElementById("rollPrizeBtn").disabled = true;
       const prize = pickWeightedPrize();
-      spinReel(document.getElementById("prizeTrack"), PRIZES.map(p => p.label), prize.label, 92, 1400, (label, isFinal, idx) => {
-        const isCoins = /Coins/.test(label);
-        const isBattle = label === "Battle Call";
-        return `<div class="reel-item prize-item">
-          ${isCoins ? coinSvg("p" + idx) : ""}
-          ${isBattle ? BATTLE_SVG : ""}
-          <span>${label}</span>
-        </div>`;
-      });
 
-      const casesArea = document.getElementById("battleCasesArea");
-      const casesGrid = document.getElementById("battleCasesGrid");
-      const casesMeta = document.getElementById("battleCasesMeta");
-      const casesNames = document.getElementById("battleCasesNames");
-      casesArea.style.display = "none";
-      casesGrid.innerHTML = "";
-      casesMeta.textContent = "";
-      casesNames.textContent = "";
+      // Winner reel spins immediately.
+      spinReel(
+        document.getElementById("winnerTrack"),
+        document.getElementById("winnerReel"),
+        currentEntries, winner, WINNER_SPIN_MS, renderWinnerCard
+      );
+      setTimeout(() => flashLanded(document.getElementById("winnerReel")), WINNER_SPIN_MS + 120);
 
-      setTimeout(async () => {
-        document.getElementById("rollPrizeBtn").disabled = false;
-        flashLanded(document.getElementById("prizeReel"));
-        const resultBox = document.getElementById("resultBox");
-        document.getElementById("resultText").textContent = `${currentWinner || "?"} — ${prize.label}`;
-        resultBox.style.display = "block";
+      // Prize reel joins in a couple seconds later, while the winner is still spinning.
+      setTimeout(() => {
+        spinReel(
+          document.getElementById("prizeTrack"),
+          document.getElementById("prizeReel"),
+          PRIZE_DISPLAY_POOL, prize.label, PRIZE_SPIN_MS, renderPrizeCard
+        );
+        setTimeout(() => flashLanded(document.getElementById("prizeReel")), PRIZE_SPIN_MS + 120);
+      }, PRIZE_DELAY_MS);
 
-        // Save this draw to local history once per winner roll (re-rolling the prize won't duplicate).
+      // Both landed → log + reveal modal.
+      const totalMs = PRIZE_DELAY_MS + PRIZE_SPIN_MS + 450;
+      setTimeout(() => {
+        rolling = false;
+        rollBtn.disabled = currentEntries.length === 0;
         if(currentWinner && !winnerLogged){
           winnerLogged = true;
           addHistory({ rainId: currentWinner, prize: prize.label, ts: Date.now() });
         }
-
-        if(prize.label !== "Battle Call" || !currentWinner) return;
-
-        const suffix = currentWinner.replace(/^RN-/, "");
-        casesArea.style.display = "block";
-        casesMeta.textContent = "Loading their battle...";
-        try{
-          const snap = await getDoc(doc(db, "entries", suffix));
-          const data = snap.exists() ? snap.data() : null;
-          if(data && Array.isArray(data.cases) && data.cases.length){
-            const extras = [
-              data.jackpot ? "Jackpot" : null,
-              data.terminal ? "Terminal" : null,
-              data.borrowPercent ? `Borrow ${data.borrowPercent}% (paid ${data.payAmount})` : null
-            ].filter(Boolean).join(" + ");
-            casesMeta.textContent = `${data.battleSize || ""} ${data.baseMode || ""}${extras ? " + " + extras : ""} — total ${data.total} coins`;
-            casesNames.textContent = data.cases.join(", ");
-            casesGrid.innerHTML = data.cases.map(name => {
-              const file = ICON_FILES[name];
-              return `<div class="battle-case-card">${file ? `<img src="icons/${encodeURIComponent(file)}" alt="">` : name}</div>`;
-            }).join("");
-          } else {
-            casesMeta.textContent = "This user hasn't submitted a battle yet.";
-          }
-        } catch(err){
-          casesMeta.textContent = "Couldn't load their battle picks.";
-        }
-      }, 1550);
+        showResultModal(winner, prize.label);
+      }, totalMs);
     }
+
   }
 </script>
 </body>
